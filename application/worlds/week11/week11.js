@@ -141,15 +141,16 @@ let setupWorld = function (state) {
 
    if (state.handles == undefined) {
       state.handles = [
-         new Vector(0, -.5, 0), new Vector(.5, -.5, 0), new Vector(1, -.5, .0), new Vector(1.5, -.5, .0),
-         new Vector(0, -.5, .5), new Vector(.5, -.5, .5), new Vector(1, -.5, .5), new Vector(1.5, -.5, .5),
-         new Vector(0, -.5, 1), new Vector(.5, -.5, 1), new Vector(1, -.5, 1), new Vector(1.5, -.5, 1),
-         new Vector(0, -.5, 1.5), new Vector(.5, -.5, 1.5), new Vector(1, -.5, 1.5), new Vector(1.5, -.5, 1.5)
+         [0, -.5, 0], [.5, -.5, 0], [1, -.5, .0], [1.5, -.5, .0],
+         [0, -.5, .5], [.5, -.5, .5], [1, -.5, .5], [.5, -.5, .5],
+         [0, -.5, 1], [.5, -.5, 1], [1, -.5, 1], [1.5, -.5, 1],
+         [0, -.5, 1.5], [.5, -.5, 1.5], [1, -.5, 1.5], [1.5, -.5, 1.5]
       ];
    }
 
+   //Offset Patch:
    for(let i = 0; i < state.handles.length; i++){
-      state.handles[i].add(new Vector(-1,0,-1));
+      state.handles[i] = CG.add(state.handles[i], [-1,0,-1]);
    }
 
 
@@ -268,26 +269,26 @@ function onStartFrame(t, state) {
    
    if (LC) {
       let tip = RC.tip();
-      let rPos = new Vector(tip[0], tip[1], tip[2]);
+      let rPos = [tip[0], tip[1], tip[2]];
 
       selection = -1;
       
       let handleSelection = getHandleIntersected(rPos, state);
 
-      let motion = Vector.sub(rPos, prevRPos);
+      let motion = CG.sub(rPos, prevRPos);
 
       if (handleSelection >= 0) {
 
          selection = handleSelection;
 
          if (RC.isDown()) {
-            state.handles[handleSelection] = Vector.add(state.handles[handleSelection], motion);
+            state.handles[handleSelection] = CG.add(state.handles[handleSelection], motion);
          }
       }
 
       if(RC.isButtonDown(0)){
          for(let i = 0; i < state.handles.length; i++){
-            state.handles[i].add(motion);
+            state.handles[i] = CG.add(state.handles[i], motion);
          }
       }
       
@@ -297,7 +298,7 @@ function onStartFrame(t, state) {
 
 
 let selection = -1;
-let prevRPos = new Vector(0,0,0);
+let prevRPos = [0,0,0];
 /*-----------------------------------------------------------------
 
 If the controller tip is near to a menu item, return the index
@@ -317,7 +318,7 @@ let getHandleIntersected = function(vec, state){
       let rad = .1;
 
       
-      if(Vector.dist(state.handles[i], vec) < rad ){
+      if(CG.dist(state.handles[i], vec) < rad ){
          return i;
       }
    }
@@ -327,9 +328,6 @@ let getHandleIntersected = function(vec, state){
 
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
-
-
-
 
    gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
    gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
@@ -379,25 +377,19 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
    -----------------------------------------------------------------*/
 
 
-
    let bezierPatch = new BezierPatch(state.handles);
-   let cubicPatch = bezierPatch.handlesToPatchArray();
 
    let patch = new ParametricMesh(
       32, 32,
-      ParametricMesh.cubicPatch,
-      Patch.toCubicPatchCoefficients(Spline.BezierBasisMatrix, cubicPatch)
+      CG.cubicPatch,
+      bezierPatch.patch
    );
 
    let lowResPatch = new ParametricMesh(
-      3, 3,
-      ParametricMesh.cubicPatch,
-      Patch.toCubicPatchCoefficients(Spline.BezierBasisMatrix, cubicPatch)
+      9, 9,
+      CG.cubicPatch,
+      bezierPatch.patch
    );
-
-
-
-
 
    /*-----------------------------------------------------------------
 
@@ -407,11 +399,6 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
    trying to do in your homework.
 
    -----------------------------------------------------------------*/
-
-
-
-
-
 
    let showMenu = p => {
       let x = p[0], y = p[1], z = p[2];
@@ -542,7 +529,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
       if(RC){
          if(RC.isButtonDown(2)){
-            drawLines(patch, [1,1,1]);
+            drawLines(lowResPatch, [1,1,1]);
          }else{
             drawStrip(patch, [.2, 0.01, .01] );
          }

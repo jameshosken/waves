@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<!-- documentation: https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Simple_synth -->
+<!-- saved from url=(0118)https://mdn.mozillademos.org/en-US/docs/Web/API/Web_Audio_API/Simple_synth$samples/The_video_keyboard?revision=1185379 -->
+<html>
+  
+
+<head>
+  <title>Simple synth generator</title>
+</head>
+
+
+<body data-gr-c-s-loaded="true">
+
+  <div><button onclick="generateTone()">Generate</button></div>
+  <!-- <div><button onclick="setup()">setup</button></div> -->
+
+  <script>
+
+    
+
+    let audioContext = null;
+    let masterGainNode = null;
+    let wave = "sine";
+
+    //Useful for waveform generator?
+    let customWaveform = null;
+    let sineTerms = null;
+    let cosineTerms = null;
+
+
+    let myOsc = null;
+
+    function generateTone() {
+
+      if(!audioContext){
+        setup();
+      }
+      
+      if (myOsc) {
+        myOsc.stop();
+        myOsc = null;
+      } else {
+        myOsc = playTone(selectRandomFreq());
+      }
+    }
+
+    function setup() {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      masterGainNode = audioContext.createGain();
+      masterGainNode.connect(audioContext.destination);
+      // masterGainNode.gain.value = volumeControl.value;
+
+      sineTerms = new Float32Array([0, 0, 1, 0, 1]);
+      cosineTerms = new Float32Array(sineTerms.length);
+      customWaveform = audioContext.createPeriodicWave(
+        cosineTerms,
+        sineTerms
+      );
+
+    }
+
+      function playTone(freq) {
+        let osc = audioContext.createOscillator();
+        osc.connect(masterGainNode);
+
+        let type = wave;
+
+        if (type == "custom") {
+          osc.setPeriodicWave(customWaveform);
+        } else {
+          osc.type = type;
+        }
+
+        osc.frequency.value = freq;
+        osc.start();
+
+        return osc;
+      }
+
+      function selectRandomFreq(){
+        return Math.random() * 200 + 200
+      }
+
+      
+ 
+
+
+  </script>
+</body>
+
+</html>
