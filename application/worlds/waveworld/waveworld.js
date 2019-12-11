@@ -25,10 +25,62 @@ const LEG_THICKNESS = inchesToMeters(2.5);
 
 let enableModeler = true;
 
+const GRIDSIZE = 1;
+const RES = 12;
+
 ////////////////////////////// SCENE SPECIFIC CODE
 
 let noise = new ImprovedNoise();
 let m = new Matrix();
+
+let setupWorld = function (state) {
+
+   if (state.handles == undefined) {
+      state.handles = [];
+      // for(let i = 0; i < GRIDSIZE * 3 + 1; i++){
+      //    for(let j = 0; j < GRIDSIZE * 3 + 1; j++){
+      //    }
+      // }
+
+
+
+      for(let x = 0; x < GRIDSIZE * 3 + 1; x++){
+         for(let y = 0; y < GRIDSIZE * 3 + 1; y++){
+                  let cX = (x - (GRIDSIZE*3)/2) * .5;
+                  let cY = (y - (GRIDSIZE*3)/2) * .5;
+                  state.handles.push(new Handle(cX, -.5, cY))
+               
+         }
+      }
+
+      // for(let chunkx = 0; chunkx < GRIDSIZE; chunkx++){
+      //    for(let chunky = 0; chunky < GRIDSIZE; chunky++){
+
+      //       for(let i = chunkx * 3; i < chunkx * 3 + 4; i++){
+      //          for(let j = chunky * 3; j < chunky * 3 + 4; j++){
+
+                  
+      //             state.handles.push(new Handle(j, -.5, i))
+      //          }
+      //       }
+      //    }
+      // }
+
+      // state.handles = [
+      //    new Handle(0, -.5, 0), new Handle(.5, -.5, 0), new Handle(1, -.5, .0), new Handle(1.5, -.5, .0),
+      //    new Handle(0, -.5, .5), new Handle(.5, -.5, .5), new Handle(1, -.5, .5), new Handle(1.5, -.5, .5),
+      //    new Handle(0, -.5, 1), new Handle(.5, -.5, 1), new Handle(1, -.5, 1), new Handle(1.5, -.5, 1),
+      //    new Handle(0, -.5, 1.5), new Handle(.5, -.5, 1.5), new Handle(1, -.5, 1.5), new Handle(1.5, -.5, 1.5)
+      // ];
+   }
+
+   // for (let i = 0; i < state.handles.length; i++) {
+   //    state.handles[i].position.add(new Vector(-2, 0, -2));
+   // }
+
+
+}
+
 
 /*--------------------------------------------------------------------------------
 
@@ -74,6 +126,7 @@ async function onExit(state) {
 }
 
 async function setup(state) {
+
    hotReloadFile(getPath('waveworld.js'));
    // (New Info): Here I am loading the graphics module once
    // This is for the sake of example:
@@ -197,6 +250,8 @@ async function setup(state) {
       'assets/audio/peacock.wav'
    ]);
 
+   setupWorld(state);
+
 
    /************************************************************************
 
@@ -258,7 +313,7 @@ function onStartFrame(t, state) {
    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
    gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
-   gl.uniform3fv(state.uCursorLoc, cursorXYZ);
+   gl.uniform3fv(state.uCursorLoc, state.cursorXYZ);
    gl.uniform1f(state.uTimeLoc, state.time);
 
    gl.enable(gl.DEPTH_TEST);
@@ -298,14 +353,14 @@ function onStartFrame(t, state) {
    //    }
    // }
 
-   
+
    if (input.RC) {
 
       let tip = input.RC.tip();
       let rPos = new Vector(tip[0], tip[1], tip[2]);
 
       selection = -1;
-      
+
       let handleSelection = getHandleIntersected(rPos, state);
 
       let motion = Vector.sub(rPos, prevRPos);
@@ -319,19 +374,24 @@ function onStartFrame(t, state) {
          }
       }
 
-      if(input.RC.isButtonDown(3)){
+      if (input.RC.isButtonDown(3)) {
+
          //If button for moving is down, store velocity:
-         state.handles.forEach(function(handle){
-               handle.setVelocity(motion);
+         state.handles.forEach(function (handle) {
+            handle.setVelocity(motion);
          });
       }
 
       prevRPos = rPos;
-   }   
+   }
 
-   state.handles.forEach(function(handle){
-      handle.update();
-   });
+   if (state.handles) {
+         // console.log("FRAME");
+         for(let i = 0; i < state.handles.length; i++){
+            state.handles[i].update();
+         }
+      
+   }
 
    releaseLocks(state);
    pollGrab(state);
@@ -356,11 +416,16 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
 function myDraw(t, projMat, viewMat, state, eyeIdx) {
 
+   if (!state.handles) {
+      console.log("No Handles")
+      return;
+   }
+
    viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
    gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
    gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
 
-   let prev_shape = null;
+   let prev_mesh = null;
 
    const input = state.input;
 
@@ -377,18 +442,71 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
    let drawStrip = (mesh, color) => {
       gl.uniform3fv(state.uColorLoc, color);
       gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.vertices), gl.STATIC_DRAW);
+      if (mesh != prev_mesh)
+         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.vertices), gl.STATIC_DRAW);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, mesh.size);
+      prev_mesh = mesh;
    }
 
    let drawLines = (mesh, color) => {
       gl.uniform3fv(state.uColorLoc, color);
       gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.vertices), gl.STATIC_DRAW);
+      if (mesh != prev_mesh)
+         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.vertices), gl.STATIC_DRAW);
       gl.drawArrays(gl.LINES, 0, mesh.size);
+      prev_mesh = mesh;
    }
 
-   let bezierPatch = new BezierPatch(positions, 16, 16);
+   let patches = [];
+
+   for(let gridX = 0; gridX < GRIDSIZE; gridX++){
+      for(let gridY = 0; gridY < GRIDSIZE; gridY++){
+
+
+         let positions = [];
+
+         for(let localX = 0; localX < 4; localX++){
+            for(let localY = 0; localY < 4; localY++){
+
+               let x = gridX * 3 + localX;
+               let y = gridY * 3 + localY;
+               let gridLength = GRIDSIZE*3 + 1
+               let idx = (y * gridLength) + x;
+
+               positions.push(state.handles[idx].position);
+            }
+         }
+         //console.log(positions);
+         patches.push(new BezierPatch(positions, RES, RES) );
+
+      }
+   }
+   //console.log(patches)
+
+   // if (state.handles) {
+   //    //FOR LOOP HEE
+
+   //    for(let i = 0; i < 1 * GRIDSIZE/3; i++){
+   //       for(let j = 0; j < 1 * GRIDSIZE/3; j++){
+   //          let idx = i * GRIDSIZE + j;
+   //          positions.push(state.handles[idx].position);
+   //       }
+   //    }
+
+   //    state.handles.forEach(function (handle) {
+   //       positions.push(handle.position);
+   //    });
+   // }
+
+
+   //let bezierPatch = new BezierPatch(positions, 12, 12);
+
+
+   m.save();
+   m.scale(10, 10, 10);
+   drawStrip(CG.sphere, [1, 1, 1]);
+   m.restore();
+
 
    m.save();
 
@@ -400,8 +518,12 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
 
       if (selection == i) {
          drawStrip(CG.sphere, [1, 1, 1]);
+
+         // drawStrip(CG.sphere, [1, 1, 1]);
       } else {
          drawStrip(CG.sphere, [0.33, .33, 0.0]);
+
+         // drawStrip(CG.sphere, [1, 1, 1]);
       }
       m.restore();
    }
@@ -412,18 +534,80 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
    // m.rotateX(t * 0.003);
    if (input.RC) {
       if (input.RC.isButtonDown(2)) {
-         drawLines(lowResPatch, [1, 0, 1]);
+         patches.forEach(function(patch){
+            drawLines(patch.patch, [1, 0, 1]);
+         })
+
       } else {
-         drawLines(patch, [1, 1, 1]);
+         patches.forEach(function(patch){
+
+            drawLines(patch.patch, [1, 0, 1]);
+         })
+         // drawLines(bezierPatch.patch, [1, 1, 1]);
       }
    } else {
-      drawLines(patch, [1, 1, 1]);
+      patches.forEach(function(patch){
+
+         drawLines(patch.patch, [1, 0, 1]);
+      })
+      // drawLines(bezierPatch.patch, [1, 1, 1]);
    }
 
    m.restore();
 
-   drawControllers(state);
+   
 
+   let drawController = (C, color) => {
+      let P = C.position(), s = C.isDown() ? .0125 : .0225;
+      m.save();
+      m.translate(P[0], P[1], P[2]);
+      m.rotateQ(C.orientation());
+      m.save();
+      m.translate(-s, 0, .001);
+      m.scale(.0125, .016, .036);
+      drawLines(CG.cube, color);
+      m.restore();
+      m.save();
+      m.translate(s, 0, .001);
+      m.scale(.0125, .016, .036);
+      // drawStrip(CG.sphere, color);
+      drawLines(CG.cube, color);
+      m.restore();
+      m.save();
+      m.translate(0, 0, .025);
+      m.scale(.015, .015, .01);
+      // drawStrip(CG.sphere, [0, 0, 0]);
+      drawLines(CG.cube, color);
+      m.restore();
+      m.save();
+      m.translate(0, 0, .035);
+      m.rotateX(.5);
+      m.save();
+      m.translate(0, -.001, .035);
+      m.scale(.014, .014, .042);
+      // drawStrip(CG.sphere, [0, 0, 0]);
+      drawLines(CG.cube, color);
+      m.restore();
+      m.save();
+      m.translate(0, -.001, .077);
+      m.scale(.014, .014, .014);
+      // drawStrip(CG.sphere, [0, 0, 0]);
+      drawLines(CG.cube, [1,1,1,]);
+
+      m.restore();
+      m.restore();
+      m.restore();
+   }   
+   
+   if (input.LC) {
+      drawController(input.LC, [1, 0, 0]);
+   }
+
+   if(input.RC){
+      drawController(input.RC, [0, 1, 1]);
+   }
+
+   // drawControllers(state);
 
 }
 
@@ -576,4 +760,165 @@ function releaseLocks(state) {
          }
       }
    }
+}
+
+
+
+/********************
+ * 
+ * CONTROLS
+ * 
+ **********************/
+
+
+function HeadsetHandler(headset) {
+   this.orientation = () => headset.pose.orientation;
+   this.position = () => headset.pose.position;
+}
+
+function ControllerHandler(controller) {
+
+   this.isDown = () => controller.buttons[1].pressed;
+
+   this.isButtonDown = (b) => controller.buttons[b].pressed;
+   this.onEndFrame = () => wasDown = this.isDown();
+   this.orientation = () => controller.pose.orientation;
+   this.position = () => controller.pose.position;
+   this.press = () => !wasDown && this.isDown();
+   this.release = () => wasDown && !this.isDown();
+   this.tip = () => {
+      let P = this.position();          // THIS CODE JUST MOVES
+      m.identity();                     // THE "HOT SPOT" OF THE
+      m.translate(P[0], P[1], P[2]);      // CONTROLLER TOWARD ITS
+      m.rotateQ(this.orientation());    // FAR TIP (FURTHER AWAY
+      m.translate(0, 0, -.03);            // FROM THE USER'S HAND).
+      let v = m.value();
+      return [v[12], v[13], v[14]];
+   }
+   this.center = () => {
+      let P = this.position();
+      m.identity();
+      m.translate(P[0], P[1], P[2]);
+      m.rotateQ(this.orientation());
+      m.translate(0, .02, -.005);
+      let v = m.value();
+      return [v[12], v[13], v[14]];
+   }
+   let wasDown = false;
+}
+
+/********************
+* DRAW CONTROLLERS
+*******************/
+
+function drawControllers(state) {
+   const input = state.input;
+
+
+   
+
+
+   // let drawHeadset = (position, orientation) => {
+   //     //  let P = HS.position();'
+   //     let P = position;
+
+   //     m.save();
+   //         m.multiply(state.avatarMatrixForward);
+   //         m.translate(P[0], P[1], P[2]);
+   //         m.rotateQ(orientation);
+   //         m.scale(.1);
+   //         m.save();
+   //             m.scale(1, 1.5, 1);
+   //             drawStrip(CG.sphere, [0, 0, 0]);
+   //         m.restore();
+   //         for (let s = -1; s <= 1; s += 2) {
+   //             m.save();
+   //                 m.translate(s * .4, .2, -.8);
+   //                 m.scale(.4, .4, .1);
+   //                 drawStrip(CG.sphere, [10, 10, 10]);
+   //             m.restore();
+   //         }
+   //     m.restore();
+   // }
+
+   // let drawAvatar = (avatar, pos, rot, scale, state) => {
+   //    m.save();
+   //    //   m.identity();
+   //       m.translate(pos[0],pos[1],pos[2]);
+   //       m.rotateQ(rot);
+   //       m.scale(scale,scale,scale);
+   //       drawStrip(avatar.headset.vertices, [1,1,1], 0);
+   //    m.restore();
+   // }
+
+
+
+   // let drawSyncController = (pos, rot, color) => {
+   //     let P = pos;
+   //     m.save();
+   //         // m.identity();
+   //         m.translate(P[0], P[1], P[2]);
+   //         m.rotateQ(rot);
+   //         m.translate(0, .02, -.005);
+   //         m.rotateX(.75);
+   //         m.save();
+   //             m.translate(0, 0, -.0095).scale(.004, .004, .003);
+   //         m.restore();
+   //         m.save();
+   //             m.translate(0, 0, -.01).scale(.04, .04, .13);
+   //             drawStrip(CG.sphere, [0, 0, 0]);
+   //         m.restore();
+   //         m.save();
+   //             m.translate(0, -.0135, -.008).scale(.04, .0235, .0015);
+   //             drawStrip(CG.sphere, [0, 0, 0]);
+   //         m.restore();
+   //         m.save();
+   //             m.translate(0, -.01, .03).scale(.012, .02, .037);
+   //             drawStrip(CG.sphere, [0, 0, 0]);
+   //         m.restore();
+   //         m.save();
+   //             m.translate(0, -.01, .067).scale(.012, .02, .023);
+   //             drawStrip(CG.sphere, [0, 0, 0]);
+   //         m.restore();
+   //     m.restore();
+   // }
+
+
+   // for (let id in MR.avatars) {
+
+   //     const avatar = MR.avatars[id];
+
+   //     if (avatar.mode == MR.UserType.vr) {
+   //         if (MR.playerid == avatar.playerid)
+   //             continue;
+
+   //         let headsetPos = avatar.headset.position;
+   //         let headsetRot = avatar.headset.orientation;
+
+   //         if (headsetPos == null || headsetRot == null)
+   //             continue;
+
+   //         if (typeof headsetPos == 'undefined') {
+   //             console.log(id);
+   //             console.log("not defined");
+   //         }
+
+   //         const rcontroller = avatar.rightController;
+   //         const lcontroller = avatar.leftController;
+
+   //         let hpos = headsetPos.slice();
+   //         hpos[1] += EYE_HEIGHT;
+
+   //         drawHeadset(hpos, headsetRot);
+   //         let lpos = lcontroller.position.slice();
+   //         lpos[1] += EYE_HEIGHT;
+   //         let rpos = rcontroller.position.slice();
+   //         rpos[1] += EYE_HEIGHT;
+
+   //         drawSyncController(rpos, rcontroller.orientation, [1, 0, 0]);
+   //         drawSyncController(lpos, lcontroller.orientation, [0, 1, 1]);
+   //     }
+   // }
+
+
 }

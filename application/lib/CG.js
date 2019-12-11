@@ -171,7 +171,7 @@ CG.createCubeVertices = () => {
       1, -1, -1, 0, 0, -1, -1, 0, 0, 0, 0, -1, 1, -1, 0, 0, -1, -1, 0, 0, 1, 1, 1, 1, -1, 0, 0, -1, -1, 0, 0, 0, 1,
       -1, 1, -1, 0, 0, -1, -1, 0, 0, 1, 1, 1, -1, -1, 0, 0, -1, -1, 0, 0, 0, 0, -1, -1, -1, 0, 0, -1, -1, 0, 0, 1, 0
    ];
-   for (let n = 0; n < 3; n++)
+   for (let n = 0; n < 3; n++){
       for (let i = 0; i < P.length; i += VERTEX_SIZE) {
          let p0 = [P[i], P[i + 1], P[i + 2]],
             p1 = [P[i + 3], P[i + 4], P[i + 5]],
@@ -184,10 +184,13 @@ CG.createCubeVertices = () => {
             P[i + 6 + j] = p2[(j + 1) % 3];
          }
       }
+   }
    /*
       To do: create edged cube by adding 12*2 edge triangles and 8 corner triangles.
    */
-   return V;
+
+   return {vertices: V,size: V.length / VERTEX_SIZE};
+   //return V;
 }
 
 
@@ -207,35 +210,35 @@ CG.uvToVertex = (u, v, args, callback) => {
 }
 
 
-CG.uvToSphere = (u,v) => CG.uvToVertex(u,v,null, (u,v) => {
+CG.uvToSphere = (u, v) => CG.uvToVertex(u, v, null, (u, v) => {
    let t = 2 * Math.PI * u,
-       p = Math.PI * (v - .5);
-   return [ Math.cos(t) * Math.cos(p) ,
-            Math.sin(t) * Math.cos(p) ,
-                          Math.sin(p) ];
+      p = Math.PI * (v - .5);
+   return [Math.cos(t) * Math.cos(p),
+   Math.sin(t) * Math.cos(p),
+   Math.sin(p)];
 });
 
-CG.uvToTorus = (u,v,r) => CG.uvToVertex(u,v,r, (u,v,r) => {
+CG.uvToTorus = (u, v, r) => CG.uvToVertex(u, v, r, (u, v, r) => {
    let t = 2 * Math.PI * u,
-       p = 2 * Math.PI * v;
-   return [ Math.cos(t) * (1 + r * Math.cos(p)),
-            Math.sin(t) * (1 + r * Math.cos(p)),
-            r * Math.sin(p) ];
+      p = 2 * Math.PI * v;
+   return [Math.cos(t) * (1 + r * Math.cos(p)),
+   Math.sin(t) * (1 + r * Math.cos(p)),
+   r * Math.sin(p)];
 });
 
 
-CG.cubicPatch = (u, v, args) =>  {
+CG.cubicPatch = (u, v, args) => {
 
-   let point = ParametricMesh.getBicubicPoint(u, v, args);
-   let p_u = ParametricMesh.getBicubicPoint(u + 0.01, v, args);
-   let p_v = ParametricMesh.getBicubicPoint(u, v + 0.01, args);
+   let point = CG.getBicubicPoint(u, v, args);
+   let p_u = CG.getBicubicPoint(u + 0.01, v, args);
+   let p_v = CG.getBicubicPoint(u, v + 0.01, args);
 
-   let diff_u = subtract(p_u, point);
-   let diff_v = subtract(p_v, point);
+   let diff_u = CG.subtract(p_u, point);
+   let diff_v = CG.subtract(p_v, point);
 
-   let norm = cross(diff_v, diff_u);
+   let norm = CG.cross(diff_v, diff_u);
 
-   let tan = subtract(p_u, point);
+   let tan = CG.subtract(p_u, point);
 
 
    // return [point[0], point[1], point[2], 0,0,-1, u, v];
@@ -258,13 +261,13 @@ CG.getBicubicPoint = (u, v, args) => {
    let U = [u * u * u, u * u, u, 1];
    let V = [v * v * v, v * v, v, 1];
 
-   let abcdx = transform(transpose(V), transform(Cx, U));
+   let abcdx = CG.matrixTransform(CG.matrixTranspose(V), CG.matrixTransform(Cx, U));
    x = abcdx[0] * x * x * x + abcdx[1] * x * x + abcdx[2] * x + abcdx[3]
 
-   let abcdy = transform(transpose(V), transform(Cy, U));
+   let abcdy = CG.matrixTransform(CG.matrixTranspose(V), CG.matrixTransform(Cy, U));
    y = abcdy[0] * y * y * y + abcdy[1] * y * y + abcdy[2] * y + abcdy[3]
 
-   let abcdz = transform(transpose(V), transform(Cz, U));
+   let abcdz = CG.matrixTransform(CG.matrixTranspose(V), CG.matrixTransform(Cz, U));
    z = abcdz[0] * z * z * z + abcdz[1] * z * z + abcdz[2] * z + abcdz[3]
 
    return [x, y, z];
@@ -279,10 +282,10 @@ class BezierPatch {
    constructor(handles, M, N) {
       this.handles = handles;
 
-      this.patch = new ParametricMesh(
+      this.patch = new ParametricGrid(
          M, N,
          CG.cubicPatch,
-         BezierPatch.toCubicPatchCoefficients(CG.BezierBasisMatrix, bezierPatch.handlesToPatchArray())
+         BezierPatch.toCubicPatchCoefficients(CG.BezierBasisMatrix, this.handlesToPatchArray())
       );
    }
 
@@ -314,7 +317,7 @@ class BezierPatch {
    static toCubicPatchCoefficients = (basisMatrix, M) => {
       let C = [];
       for (let i = 0; i < M.length; i++)
-         C.push(multiply(basisMatrix, multiply(M[i], transpose(basisMatrix))));
+         C.push(CG.matrixMultiply(basisMatrix, CG.matrixMultiply(M[i], CG.matrixTranspose(basisMatrix))));
       return C;
    }
 }
@@ -369,6 +372,10 @@ class Vector {
       return new Vector(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z)
    }
 
+   static mult(v1, s) {
+      return new Vector(v1.x *s, v1.y *s, v1.z *s)
+   }
+
 }
 
 
@@ -396,7 +403,59 @@ class ParametricMesh {
       return vertices;
    }
 
+}
 
+
+class ParametricGrid {
+
+   constructor(M, N, callbackType, args) {
+      // console.log("Creating Mesh!")
+      this.vertices = ParametricGrid.createParametricGrid(M, N, callbackType, args);
+      this.size = this.vertices.length / VERTEX_SIZE
+   }
+
+   static createParametricGrid(M, N, callback, args) {
+
+      let vertices = [];
+
+      let uv = { u: 1, v: 0 };  //Set initial corner 
+      let uInc = 1.0;
+      let vInc = 1.0;
+
+      for (let row = 0; row < N; row++) {
+
+         //let uIncrement = (row % 2 == 0) ? -1 : 1;  // Determine traverse direction
+
+         for (let col = 0; col < M; col++) {
+
+            uv = {
+               u: col / M,   // If row is even, start from right.
+               v: row / N              // Alternate rows
+            };
+            vertices = vertices.concat(callback(uv.u, uv.v, args));
+
+            uv = {
+               u: (col + uInc) / M,   // If row is even, start from right.
+               v: row / N              // Alternate rows
+            };
+            vertices = vertices.concat(callback(uv.u, uv.v, args));
+
+
+            uv = {
+               u: (col) / M,   // If row is even, start from right.
+               v: (row) / N              // Alternate rows
+            };
+            vertices = vertices.concat(callback(uv.u, uv.v, args));
+
+            uv = {
+               u: col / M,   // If row is even, start from right.
+               v: (row + vInc) / N              // Alternate rows
+            };
+            vertices = vertices.concat(callback(uv.u, uv.v, args));
+         }
+      }
+      return vertices;
+   }
 }
 
 
@@ -431,7 +490,11 @@ class ParametricMesh {
 
 // CG.cube     = CG.createCubeVertices();
 // CG.quad     = CG.createQuadVertices();
-CG.sphere   = new ParametricMesh(32, 16, CG.uvToSphere);
+CG.sphere = new ParametricMesh(32, 16, CG.uvToSphere);
+
+CG.linesphere = new ParametricGrid(32, 16, CG.uvToSphere);
+
+CG.cube = CG.createCubeVertices();
 // CG.cylinder = CG.createMeshVertices(32,  6, CG.uvToCylinder);
 // CG.torus    = CG.createMeshVertices(32, 16, CG.uvToTorus, 0.3);
 // CG.torus1   = CG.createMeshVertices(32, 16, CG.uvToTorus, 0.1);
