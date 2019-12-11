@@ -3,7 +3,7 @@
   <link   rel="icon" href="favicon.ico" type="image/x-icon">
   <link   rel="stylesheet" href="system/client/css/main.css">
   <link   rel="stylesheet" href="system/client/css/glslEditor/glslEditor.css">
-  <meta charset="UTF-8">
+
   <script src="system/client/js/lib/input.js"></script>
   <script src="system/client/js/lib/ImprovedNoise.js"></script>
   <script src="system/client/js/lib/pathutil.js"></script>
@@ -14,28 +14,39 @@
   <script src="system/client/js/lib/htmlutil.js"></script>
 <!--   <script src="system/client/js/third-party/gl-matrix-min.js"></script> -->
   <script src="system/client/js/third-party/FileSaver.min.js"></script>
+  <script src="system/client/js/third-party/axios.min.js"></script>
   <script src="system/client/js/lib/assetutil.js"></script>
   <script src="system/client/js/lib/gfxutil.js"></script>
   <script src="system/client/js/lib/imageutil.js"></script>
+  <script src="system/client/js/lib/audio.js"></script>
+  <script src="system/client/js/lib/viewpoint_controller.js"></script>
+
   <!-- WebXR Button implements a button to toggle in and out of VR. -->
   <script src="system/client/js/lib/webxr-button.js"></script>
-    <!-- WebXR Server and Client. -->
-  <script src="system/client/js/core/client.js"></script>  
+  <!-- WebXR Server and Client. -->
+  <script src="system/client/js/core/client.js"></script>
+  <script src="system/client/js/core/avatar.js"></script>
+  <script src="system/client/js/core/EventBus.js"></script>
+  <script src="system/client/js/core/lock.js"></script>
   <!-- WebXR Canvas Wrangler back-end. -->
   <script src="system/client/js/core/webvr-wrangler.js"></script>
-  <script src=worlds/week11/graphics.js></script>
+  <script src=lib/CG.js></script>
+  <script src=lib/connections.js></script>
+  <script src=lib/utility.js></script>
+  <script src=lib/controls.js></script>
+  <script src=lib/handles.js></script>
 
-
-  
   <!--   System Initialization -->
   <!-- System Version Number -->
   <div id='version' value='1'></div>
   <div id='resolution'       value='640,640'></div>
-  <div id='server-ip'        value='10.18.228.223'></div>
+ <!--  <div id='server-ip'        value='localhost'></div> -->
+  <div id='server-ip'        value='192.168.1.105'></div>
   <div id='server-comm-port' value='3001'></div>
+  <div id=''                 value='192.168.1.105'></div>
   <div id='server-sync-port' value='11235'></div>
   <script src="system/client/js/core/metaroom.js"></script>
-
+  <script src="system/client/js/core/callback.js"></script>  
   <!-- Shader Editor -->
   <script type="module" src="system/client/js/lib/mreditor.js"></script>
 
@@ -55,7 +66,9 @@
   </div>
   <!-- World Code Area -->
   <div class='worlds'>
-    <script type="module" src=worlds/week11/week11.js></script>
+    <!--<script type="module" src=worlds/metanook2/metanook2.js></script>-->
+    <script type="module" src=worlds/waveworld/waveworld.js></script>
+
   </div>
   <!-- Program Entry-point -->
   <script type="module" src="system/client/js/run.js"></script>

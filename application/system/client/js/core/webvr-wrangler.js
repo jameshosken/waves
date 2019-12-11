@@ -1,17 +1,5 @@
 'use strict';
 
-
-window.initControllers = () => {
-   if (MR.VRIsActive()) {
-      MR.headset = MR.frameData();
-      let left_is_0 = MR.controllers[0].id.indexOf('Left') > 0;
-      if (MR.controllers) {
-         MR.leftController  = MR.controllers[left_is_0 ? 0 : 1];
-         MR.rightController = MR.controllers[left_is_0 ? 1 : 0];
-      }
-   }
-}
-
 window.VRCanvasWrangler = (function() {
 
     // temporary hard-coded shim for matrix operations
@@ -157,7 +145,6 @@ window.VRCanvasWrangler = (function() {
             this._init();
 
             Input.initKeyEvents(this._canvas);
-            Input.initControllerEvents();
         }
 
         start() {
@@ -192,31 +179,15 @@ window.VRCanvasWrangler = (function() {
             conf.onEndFrame = options.onEndFrame || conf.onEndFrame;
             conf.onDraw = options.onDraw || conf.onDraw;
             conf.onDrawXR = options.onDrawXR || conf.onDraw;
+            conf.onExit = options.onExit || conf.onExit;
             conf.onAnimationFrame = options.onAnimationFrame || conf.onAnimationFrame;
             conf.onAnimationFrameWindow = options.onAnimationFrameWindow || conf.onAnimationFrameWindow;
         }
 
-        initMultiViewpointSystem() {
-            this.viewpointInfo = {};
-            this.viewpointInfo.splitscreen = true;
-            this.viewpointInfo.activeViewID = -1;
-
-            MR.multiViewpointSystem = () => {
-                return this.viewpointInfo;
-            }
-        }
-
-
-
-        enableMultiViewpointSplitscreen(opt) {
-            this.viewpointInfo.splitscreen = opt;
-        }
-
-        setHostViewpoint(id) {
-            // TODO
-        }
-
         async configure(options) {
+            if (this.config.onExit) {
+                this.config.onExit(this.customState);
+            }
 
             this._clearConfig();
             this._reset();
@@ -231,6 +202,7 @@ window.VRCanvasWrangler = (function() {
             options.onAnimationFrameWindow = options.onAnimationFrameWindow || this._onAnimationFrameWindow.bind(this);
             options.onSelectStart = options.onSelectStart || function(t, state) {};
             options.onReload = options.onReload || function(state) {};
+            options.onExit = options.onExit || function(state) {};
 
             options.onSelect = options.onSelect || (function(t, state) {});
             options.onSelectEnd = options.selectEnd || (function(t, state) {});
@@ -365,58 +337,76 @@ window.VRCanvasWrangler = (function() {
                     () => { return MR.wrangler.doWorldTransition({direction : +1, broadcast : true}); }
                     );
 
+                this.playerViewScroll = createVerticalMenuElement();
 
-                MR.switchView = (uid) => {
-                    if (uid == -1) {
-                        MR.multiViewpointSystem().activeViewID = -1;
-                        return -1;
+                MR.initPlayerViewSelectionScroll = () => {
+                    window.CLICKMENUPLAYERS = (id) => {
+                        const el = document.getElementById(id);
+                        el.classList = "active";
+                        MR.wrangler.menu.enableDisablePlayersScroll();     
+
+                        window.DISABLEMENUFORPLAYERSEXCEPT(id);   
                     }
-                    console.log(MR.wrangler.customState.world.remoteUserInfo);
-                    if (!MR.wrangler.customState.world.remoteUserInfo[uid]) {
-                        console.warn("UID does not exist");
-                        return -2;
-                    }
-                    MR.multiViewpointSystem().activeViewID = uid;
-                    return uid;
-                }
-
-                let inputBox = document.createElement("input");
-                inputBox.setAttribute('id', 'user-view-selection');
-                inputBox.setAttribute('value', -1);
-                inputBox.setAttribute('type', 'number');
-                inputBox.classList.add('user-view-selection');
-                this.userSelection = inputBox;
-
-                this.userSelectionEnabled = 0;
-                this.userSelection.style.display = "none";
-                const userSelectionDisplayOpt = ["none", ""];
-                this.userSelection.addEventListener("keyup", (event) => {
-                    if (event.key == "Enter") {
-                        try {
-                            MR.switchView(parseInt(inputBox.value));
-                        } catch (e) {
-                            console.error(e);
+                    window.DISABLEMENUFORPLAYERSEXCEPT = (id) => {
+                        const playersMenuItems = this.playerViewScroll.getElementsByTagName("div");
+                        id = parseInt(id);
+                        for (let i = 0; i < id; i += 1) {
+                            playersMenuItems[i].classList.remove("active");
                         }
-                        this.menu.enableDisableUserSelection();
+
+                        const len = playersMenuItems.length;
+                        for (let i = id + 1; i < len; i += 1) {
+                            playersMenuItems[i].classList.remove("active");
+                        }
+                        playersMenuItems[id].classList.add("active");
+
+                        const playerid = playersMenuItems[id].getAttribute("value");
+                        MR.viewpointController.switchView(playerid);
+                        MR.updatePlayersMenu();
                     }
-                });
-                this.menu.enableDisableUserSelection = () => {
-                    this.userSelectionEnabled = 1 - this.userSelectionEnabled; 
-                    this.userSelection.style.display = 
-                    userSelectionDisplayOpt[this.userSelectionEnabled];
-                    inputBox.value = MR.multiViewpointSystem().activeViewID;
-                    if (this.userSelectionEnabled) {
-                        inputBox.focus();
-                        inputBox.select();
+                    function addPlayerMenuEntry(contentArr, i, id) {
+                        contentArr.push(
+                            "<div id="
+                        );
+                        contentArr.push(i);
+                        contentArr.push(" value=");
+                        contentArr.push(id);
+                        contentArr.push(' onclick="window.CLICKMENUPLAYERS(this.id)">');
+                        contentArr.push('       ');
+                        contentArr.push(id);
+                        contentArr.push("</div>\n");                        
                     }
+                    MR.updatePlayersMenu = () => {
+                        const players = MR.avatars;
+                        const contentArr = [];
+
+                        let i = 0;
+                        for (let id in players) {
+                            addPlayerMenuEntry(contentArr, i, id);
+                            i += 1;
+                        }
+
+                        this.playerViewScroll.innerHTML = contentArr.join('');
+                    };
+                };
+
+                this.playerViewScrollEnabled = 0;
+                this.playerViewScroll.style.display = "none";
+                const playerViewScrollDisplayOpt = ["none", ""];
+
+                this.menu.enableDisablePlayersScroll = () => {
+                    this.playerViewScrollEnabled = 1 - this.playerViewScrollEnabled; 
+                    this.playerViewScroll.style.display = 
+                    playerViewScrollDisplayOpt[this.playerViewScrollEnabled]; 
                 }
-                this.menu.menus.observe = new MenuItem(
+//////////////////////////////////////////////////////////////////////////////////
+                this.menu.menus.playerViewSelection = new MenuItem(
                     this.menu.el,
                     'ge_menu',
-                    'Peer Mode',
-                    this.menu.enableDisableUserSelection
+                    'User View',
+                    this.menu.enableDisablePlayersScroll
                 );
-                this.menu.menus.observe.el.appendChild(inputBox);
+                this.menu.menus.playerViewSelection.el.appendChild(this.playerViewScroll);
 
                 }
 
@@ -604,8 +594,9 @@ window.VRCanvasWrangler = (function() {
                             shiftDown__ = true;
                             mouseMoveHandler__({clientX : clientX, clientY : clientY});
                         } else if (event.key == 'Alt') {
-                            altDown = true;
-
+                            if (window.navigator.userAgent.indexOf("Mac") != -1)
+                                altDown = true;
+ 
                             event.preventDefault();
                         }
                     });
@@ -641,6 +632,7 @@ window.VRCanvasWrangler = (function() {
                 options.onAnimationFrame = this._onAnimationFrame.bind(this);
                 options.onAnimationFrameWindow = this._onAnimationFrameWindow.bind(this);
                 options.onReload = function(state) {};
+                options.onExit = function(state) {};
             //options.onWindowFrame = this._onWindowFrame.bind(this);
 
             // selection
@@ -655,8 +647,6 @@ window.VRCanvasWrangler = (function() {
             } else {
                 window.cancelAnimationFrame(this._animationHandle);
             }
-
-
         }
 
         _onVRRequestPresent () {
@@ -724,7 +714,7 @@ window.VRCanvasWrangler = (function() {
                 gl.canvas.width / gl.canvas.height,
                 0.01, 1024);
 
-            initControllers();
+            Input.updateKeyState();
             this.config.onStartFrame(t, this.customState);
 
             GFX.viewportXOffset = 0;
@@ -736,96 +726,90 @@ window.VRCanvasWrangler = (function() {
             this.time = t / 1000.0;
             this.timeMS = t;
 
-                // For now, all VR gamepad button presses trigger a world transition.
-                MR.controllers = navigator.getGamepads();
-                let gamepads = navigator.getGamepads();
-                let vrGamepadCount = 0;
-                let doTransition = false;
-                for (var i = 0; i < gamepads.length; ++i) {
-                    var gamepad = gamepads[i];
-                    if (gamepad) { // gamepads may contain null-valued entries (eek!)
-                        if (gamepad.pose || gamepad.displayId ) { // VR gamepads will have one or both of these properties.
-                            var cache = this.buttonsCache[vrGamepadCount] || [];
-                            for (var j = 0; j < gamepad.buttons.length; j++) {
+            // For now, all VR gamepad button presses trigger a world transition.
+            MR.controllers = navigator.getGamepads();
+            let gamepads = navigator.getGamepads();
+            let vrGamepadCount = 0;
+            let doTransition = false;
+            for (var i = 0; i < gamepads.length; ++i) {
+                var gamepad = gamepads[i];
+                if (gamepad) { // gamepads may contain null-valued entries (eek!)
+                    if (gamepad.pose || gamepad.displayId ) { // VR gamepads will have one or both of these properties.
+                        var cache = this.buttonsCache[vrGamepadCount] || [];
+                        for (var j = 0; j < gamepad.buttons.length; j++) {
 
-                                // Check for any buttons that are pressed and previously were not.
+                            // Check for any buttons that are pressed and previously were not.
 
-                                if (cache[j] != null && !cache[j] && gamepad.buttons[j].pressed) {
-                                    console.log('pressed gamepad', i, 'button', j);
-                                    //doTransition = true;
-                                }
-                                cache[j] = gamepad.buttons[j].pressed;
+                            if (cache[j] != null && !cache[j] && gamepad.buttons[j].pressed) {
+                                console.log('pressed gamepad', i, 'button', j);
+                                //doTransition = true;
                             }
-                            this.buttonsCache[vrGamepadCount] = cache;
-                            vrGamepadCount++;
+                            cache[j] = gamepad.buttons[j].pressed;
                         }
+                        this.buttonsCache[vrGamepadCount] = cache;
+                        vrGamepadCount++;
                     }
                 }
-
-                // revert to windowed rendering if there is no VR display
-                // or if the VR display is not presenting
-                const vrDisplay = this._vrDisplay;
-                if (!vrDisplay) {
-                    this.config.onAnimationFrameWindow(t);
-                    if (this.options.enableMultipleWorlds && doTransition) {
-                     this.doWorldTransition({direction : 1, broadcast : true});
-                 }
-                 return;
-             }
-
-             const gl = this._gl;
-             const frame = this._frameData;
-             if (!vrDisplay.isPresenting) {
-                this.config.onAnimationFrameWindow(t);
-                if (this.options.enableMultipleWorlds && doTransition) {
-                 this.doWorldTransition({direction : 1, broadcast : true});
-             }
-             return;
-         }
-         vrDisplay.getFrameData(frame);
-
-         
-
-         this._animationHandle = vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
-         initControllers();
-         this.config.onStartFrame(t, this.customState);
-         {
-                        // left eye
-                        gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
-                        GFX.viewportXOffset = 0;
-                        this.config.onDrawXR(t, frame.leftProjectionMatrix, frame.leftViewMatrix, this.customState);
-                        
-                        // right eye
-                        gl.viewport(gl.canvas.width * 0.5, 0, gl.canvas.width * 0.5, gl.canvas.height);
-                        GFX.viewportXOffset = gl.canvas.width * 0.5;
-                        this.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, this.customState);
-                    }
-                    this.config.onEndFrame(t, this.customState);
-                    if (this.options.enableMultipleWorlds && doTransition) {
-                     this.doWorldTransition({direction : 1, broadcast : true});
-                 }
-
-                 vrDisplay.submitFrame();
-             }
-
-             _glAttachResourceTracking() {
-                if (!this.glDoResourceTracking) {
-                    return;
-                }
-
-                GFX.glAttachResourceTracking(this._gl, this._version);
             }
 
-            _glFreeResources() {
-                if (!this.glDoResourceTracking) {
-                    return;
+            // revert to windowed rendering if there is no VR display
+            // or if the VR display is not presenting
+            const vrDisplay = this._vrDisplay;
+            if (!vrDisplay) {
+                this.config.onAnimationFrameWindow(t);
+                if (this.options.enableMultipleWorlds && doTransition) {
+                   this.doWorldTransition({direction : 1, broadcast : true});
                 }
+                return;
+            }
 
+            const gl = this._gl;
+            const frame = this._frameData;
+            if (!vrDisplay.isPresenting) {
+               this.config.onAnimationFrameWindow(t);
+               if (this.options.enableMultipleWorlds && doTransition) {
+                  this.doWorldTransition({direction : 1, broadcast : true});
+               }
+               return;
+            }
+            vrDisplay.getFrameData(frame);
+
+            this._animationHandle = vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
+
+            Input.updateControllerState();
+            this.config.onStartFrame(t, this.customState);
+
+            // left eye
+            gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
+            GFX.viewportXOffset = 0;
+            this.config.onDrawXR(t, frame.leftProjectionMatrix, frame.leftViewMatrix, this.customState);
+                    
+            // right eye
+            gl.viewport(gl.canvas.width * 0.5, 0, gl.canvas.width * 0.5, gl.canvas.height);
+            GFX.viewportXOffset = gl.canvas.width * 0.5;
+            this.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, this.customState);
+
+            this.config.onEndFrame(t, this.customState);
+            if (this.options.enableMultipleWorlds && doTransition) {
+               this.doWorldTransition({direction : 1, broadcast : true});
+            }
+            vrDisplay.submitFrame();
+        }
+
+        _glAttachResourceTracking() {
+            if (!this.glDoResourceTracking) {
+                return;
+            }
+            GFX.glAttachResourceTracking(this._gl, this._version);
+        }
+
+        _glFreeResources() {
+            if (!this.glDoResourceTracking) {
+                return;
+            }
             //console.log("Cleaning graphics context:");
-
             GFX.glFreeResources(this._gl);
         }
-        
     };
 
     return VRBasicCanvasWrangler;
