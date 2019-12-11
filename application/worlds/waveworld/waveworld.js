@@ -44,34 +44,13 @@ let setupWorld = function (state) {
 
 
 
-      for(let x = 0; x < GRIDSIZE * 3 + 1; x++){
-         for(let y = 0; y < GRIDSIZE * 3 + 1; y++){
-                  let cX = (x - (GRIDSIZE*3)/2) * .5;
-                  let cY = (y - (GRIDSIZE*3)/2) * .5;
-                  state.handles.push(new Handle(cX, -.5, cY))
-               
+      for (let x = 0; x < GRIDSIZE * 3 + 1; x++) {
+         for (let y = 0; y < GRIDSIZE * 3 + 1; y++) {
+            let cX = (x - (GRIDSIZE * 3) / 2) * .5;
+            let cY = (y - (GRIDSIZE * 3) / 2) * .5;
+            state.handles.push(new Handle(cX, -.5, cY))
          }
       }
-
-      // for(let chunkx = 0; chunkx < GRIDSIZE; chunkx++){
-      //    for(let chunky = 0; chunky < GRIDSIZE; chunky++){
-
-      //       for(let i = chunkx * 3; i < chunkx * 3 + 4; i++){
-      //          for(let j = chunky * 3; j < chunky * 3 + 4; j++){
-
-                  
-      //             state.handles.push(new Handle(j, -.5, i))
-      //          }
-      //       }
-      //    }
-      // }
-
-      // state.handles = [
-      //    new Handle(0, -.5, 0), new Handle(.5, -.5, 0), new Handle(1, -.5, .0), new Handle(1.5, -.5, .0),
-      //    new Handle(0, -.5, .5), new Handle(.5, -.5, .5), new Handle(1, -.5, .5), new Handle(1.5, -.5, .5),
-      //    new Handle(0, -.5, 1), new Handle(.5, -.5, 1), new Handle(1, -.5, 1), new Handle(1.5, -.5, 1),
-      //    new Handle(0, -.5, 1.5), new Handle(.5, -.5, 1.5), new Handle(1, -.5, 1.5), new Handle(1.5, -.5, 1.5)
-      // ];
    }
 
    // for (let i = 0; i < state.handles.length; i++) {
@@ -386,11 +365,11 @@ function onStartFrame(t, state) {
    }
 
    if (state.handles) {
-         // console.log("FRAME");
-         for(let i = 0; i < state.handles.length; i++){
-            state.handles[i].update();
-         }
-      
+      // console.log("FRAME");
+      for (let i = 0; i < state.handles.length; i++) {
+         state.handles[i].update();
+      }
+
    }
 
    releaseLocks(state);
@@ -459,28 +438,65 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
 
    let patches = [];
 
-   for(let gridX = 0; gridX < GRIDSIZE; gridX++){
-      for(let gridY = 0; gridY < GRIDSIZE; gridY++){
-
+   for (let gridX = 0; gridX < GRIDSIZE; gridX++) {
+      for (let gridY = 0; gridY < GRIDSIZE; gridY++) {
 
          let positions = [];
 
-         for(let localX = 0; localX < 4; localX++){
-            for(let localY = 0; localY < 4; localY++){
+         for (let localX = 0; localX < 4; localX++) {
+            for (let localY = 0; localY < 4; localY++) {
 
                let x = gridX * 3 + localX;
                let y = gridY * 3 + localY;
-               let gridLength = GRIDSIZE*3 + 1
+               let gridLength = GRIDSIZE * 3 + 1
                let idx = (y * gridLength) + x;
 
                positions.push(state.handles[idx].position);
             }
          }
-         //console.log(positions);
-         patches.push(new BezierPatch(positions, RES, RES) );
 
+         patches.push(new BezierPatch(positions, RES, RES));
       }
    }
+
+   let intersectionSphere = { vec: new Vector(0, -1, 0), contact: false };
+   if (input.RC) {
+
+      //If drum mode
+      if (input.RC.isButtonDown(2)) {
+
+         //TODO this in onStartFrame
+
+         let tip = input.RC.tip();
+         let rPos = new Vector(tip[0], tip[1], tip[2]);
+
+         patches.forEach(function (patch) {
+            let closest = 1000;
+            let point = null;
+            // console.log(patch)
+            patch.mesh.collisionPoints.forEach(function (collisionPoint) {
+               let d = Vector.dist(rPos, collisionPoint);
+               if (d < closest) {
+                  closest = d;
+                  point = collisionPoint;
+               }
+            });
+
+            if (closest < .1) {
+               intersectionSphere.vec = new Vector(point.x, point.y, point.z);
+               intersectionSphere.contact = true;
+            }
+
+
+         });
+
+      }
+
+
+   }
+
+
+
    //console.log(patches)
 
    // if (state.handles) {
@@ -529,36 +545,48 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
    }
 
 
+   /**DRAW REFERENCE SPHERE */
+   if (intersectionSphere.contact) {
+      m.save();
+      m.translate(intersectionSphere.vec.x, intersectionSphere.vec.y, intersectionSphere.vec.z);
+      m.scale(.1, .1, .1);
+      drawStrip(CG.sphere, [1, 0, 0]);
+      m.restore();
+
+   }
+
    // m.rotateY(t * 0.001);
    // m.rotateZ(t * 0.002);
    // m.rotateX(t * 0.003);
    if (input.RC) {
       if (input.RC.isButtonDown(2)) {
-         patches.forEach(function(patch){
-            drawLines(patch.patch, [1, 0, 1]);
+         patches.forEach(function (patch) {
+            drawLines(patch.mesh, [1, 0, 1]);
          })
 
       } else {
-         patches.forEach(function(patch){
+         patches.forEach(function (patch) {
 
-            drawLines(patch.patch, [1, 0, 1]);
+            drawLines(patch.mesh, [1, 0, 1]);
          })
          // drawLines(bezierPatch.patch, [1, 1, 1]);
       }
    } else {
-      patches.forEach(function(patch){
+      patches.forEach(function (patch) {
 
-         drawLines(patch.patch, [1, 0, 1]);
+         drawLines(patch.mesh, [1, 0, 1]);
       })
       // drawLines(bezierPatch.patch, [1, 1, 1]);
    }
 
    m.restore();
 
-   
+
 
    let drawController = (C, color) => {
+
       let P = C.position(), s = C.isDown() ? .0125 : .0225;
+
       m.save();
       m.translate(P[0], P[1], P[2]);
       m.rotateQ(C.orientation());
@@ -570,13 +598,11 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       m.save();
       m.translate(s, 0, .001);
       m.scale(.0125, .016, .036);
-      // drawStrip(CG.sphere, color);
       drawLines(CG.cube, color);
       m.restore();
       m.save();
       m.translate(0, 0, .025);
       m.scale(.015, .015, .01);
-      // drawStrip(CG.sphere, [0, 0, 0]);
       drawLines(CG.cube, color);
       m.restore();
       m.save();
@@ -585,26 +611,31 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       m.save();
       m.translate(0, -.001, .035);
       m.scale(.014, .014, .042);
-      // drawStrip(CG.sphere, [0, 0, 0]);
       drawLines(CG.cube, color);
       m.restore();
       m.save();
       m.translate(0, -.001, .077);
       m.scale(.014, .014, .014);
-      // drawStrip(CG.sphere, [0, 0, 0]);
-      drawLines(CG.cube, [1,1,1,]);
+
+      drawLines(CG.cube, [1, 1, 1,]);
 
       m.restore();
       m.restore();
       m.restore();
-   }   
-   
+   }
+
    if (input.LC) {
       drawController(input.LC, [1, 0, 0]);
    }
 
-   if(input.RC){
-      drawController(input.RC, [0, 1, 1]);
+   if (input.RC) {
+      if(input.RC.isButtonDown(2)){
+
+         drawController(input.RC, [1, 1, 1]);
+      }else{
+
+         drawController(input.RC, [0, 1, 1]);
+      }
    }
 
    // drawControllers(state);
@@ -787,12 +818,14 @@ function ControllerHandler(controller) {
    this.press = () => !wasDown && this.isDown();
    this.release = () => wasDown && !this.isDown();
    this.tip = () => {
+      m.save();
       let P = this.position();          // THIS CODE JUST MOVES
       m.identity();                     // THE "HOT SPOT" OF THE
       m.translate(P[0], P[1], P[2]);      // CONTROLLER TOWARD ITS
       m.rotateQ(this.orientation());    // FAR TIP (FURTHER AWAY
       m.translate(0, 0, -.03);            // FROM THE USER'S HAND).
       let v = m.value();
+      m.restore();
       return [v[12], v[13], v[14]];
    }
    this.center = () => {
@@ -815,7 +848,7 @@ function drawControllers(state) {
    const input = state.input;
 
 
-   
+
 
 
    // let drawHeadset = (position, orientation) => {

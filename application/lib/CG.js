@@ -171,7 +171,7 @@ CG.createCubeVertices = () => {
       1, -1, -1, 0, 0, -1, -1, 0, 0, 0, 0, -1, 1, -1, 0, 0, -1, -1, 0, 0, 1, 1, 1, 1, -1, 0, 0, -1, -1, 0, 0, 0, 1,
       -1, 1, -1, 0, 0, -1, -1, 0, 0, 1, 1, 1, -1, -1, 0, 0, -1, -1, 0, 0, 0, 0, -1, -1, -1, 0, 0, -1, -1, 0, 0, 1, 0
    ];
-   for (let n = 0; n < 3; n++){
+   for (let n = 0; n < 3; n++) {
       for (let i = 0; i < P.length; i += VERTEX_SIZE) {
          let p0 = [P[i], P[i + 1], P[i + 2]],
             p1 = [P[i + 3], P[i + 4], P[i + 5]],
@@ -189,7 +189,7 @@ CG.createCubeVertices = () => {
       To do: create edged cube by adding 12*2 edge triangles and 8 corner triangles.
    */
 
-   return {vertices: V,size: V.length / VERTEX_SIZE};
+   return { vertices: V, size: V.length / VERTEX_SIZE };
    //return V;
 }
 
@@ -282,11 +282,14 @@ class BezierPatch {
    constructor(handles, M, N) {
       this.handles = handles;
 
-      this.patch = new ParametricGrid(
+      this.mesh = new ParametricGrid(
          M, N,
          CG.cubicPatch,
-         BezierPatch.toCubicPatchCoefficients(CG.BezierBasisMatrix, this.handlesToPatchArray())
+         BezierPatch.toCubicPatchCoefficients(CG.BezierBasisMatrix, this.handlesToPatchArray()),
+         true
       );
+
+
    }
 
    transformHandle(n, x, y, z) {
@@ -373,7 +376,7 @@ class Vector {
    }
 
    static mult(v1, s) {
-      return new Vector(v1.x *s, v1.y *s, v1.z *s)
+      return new Vector(v1.x * s, v1.y * s, v1.z * s)
    }
 
 }
@@ -388,6 +391,7 @@ class ParametricMesh {
    constructor(M, N, callbackType, args) {
       // console.log("Creating Mesh!")
       this.vertices = ParametricMesh.createParametricMesh(M, N, callbackType, args);
+      
       this.size = this.vertices.length / VERTEX_SIZE
    }
 
@@ -403,15 +407,24 @@ class ParametricMesh {
       return vertices;
    }
 
+
 }
+
 
 
 class ParametricGrid {
 
-   constructor(M, N, callbackType, args) {
-      // console.log("Creating Mesh!")
+   constructor(M, N, callbackType, args, collision = false) {
+      
       this.vertices = ParametricGrid.createParametricGrid(M, N, callbackType, args);
-      this.size = this.vertices.length / VERTEX_SIZE
+      this.size = this.vertices.length / VERTEX_SIZE;
+
+      this.collisionPoints = [];
+
+      if(collision){
+         this.collisionPoints = ParametricGrid.createCollisionGrid(M*2, N*2, callbackType, args);
+      }
+
    }
 
    static createParametricGrid(M, N, callback, args) {
@@ -455,6 +468,30 @@ class ParametricGrid {
          }
       }
       return vertices;
+   }
+
+   
+   static createCollisionGrid(M, N, callback, args) {
+
+      let points = [];
+
+      let uv = { u: 1, v: 0 };  //Set initial corner 
+      let uInc = 1.0;
+      let vInc = 1.0;
+
+      for (let row = 0; row < N; row++) {
+
+         for (let col = 0; col < M; col++) {
+            uv = {
+               u: col / M,   // If row is even, start from right.
+               v: row / N              // Alternate rows
+            };
+            //Convert vertex back to vector (TODO: Make more effecient than this nonesense)
+            let vertex = callback(uv.u, uv.v, args);
+            points.push(new Vector(vertex[0],vertex[1],vertex[2]));
+         }
+      }
+      return points;
    }
 }
 
