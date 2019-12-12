@@ -23,10 +23,17 @@ const TABLE_WIDTH = inchesToMeters(60);
 const TABLE_THICKNESS = inchesToMeters(11 / 8);
 const LEG_THICKNESS = inchesToMeters(2.5);
 
+let MATERIALS = {
+   default: 0,
+   sun: 1,
+   orb: 2,
+   emission: 3
+}
+
 let enableModeler = true;
 
 const GRIDSIZE = 1;
-const RES = 12;
+const RES = 9;
 
 ////////////////////////////// SCENE SPECIFIC CODE
 
@@ -34,28 +41,33 @@ let noise = new ImprovedNoise();
 let m = new Matrix();
 
 let setupWorld = function (state) {
-
+   let scl = 1
    if (state.handles == undefined) {
       state.handles = [];
-      // for(let i = 0; i < GRIDSIZE * 3 + 1; i++){
-      //    for(let j = 0; j < GRIDSIZE * 3 + 1; j++){
-      //    }
-      // }
-
 
 
       for (let x = 0; x < GRIDSIZE * 3 + 1; x++) {
          for (let y = 0; y < GRIDSIZE * 3 + 1; y++) {
-            let cX = (x - (GRIDSIZE * 3) / 2) * .5;
-            let cY = (y - (GRIDSIZE * 3) / 2) * .5;
-            state.handles.push(new Handle(cX, -.5, cY))
+            let cX = (x - (GRIDSIZE * 3) / 2) * scl;
+            let cY = (y - (GRIDSIZE * 3) / 2) * scl;
+            state.handles.push(new Handle(cX, 0, cY))
          }
       }
    }
 
-   // for (let i = 0; i < state.handles.length; i++) {
-   //    state.handles[i].position.add(new Vector(-2, 0, -2));
-   // }
+   //HERE OFFSET WORLD 
+
+   if (!state.worldOffset) {
+      state.worldOffset = new Vector(0, -0.5, 0);
+   }
+
+   for (let i = 0; i < state.handles.length; i++) {
+      state.handles[i].position.add(state.worldOffset);
+   }
+
+
+
+
 
 
 }
@@ -128,12 +140,11 @@ async function setup(state) {
       RC: null
    }
 
-
-
    let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
       { key: "pnoise", path: "shaders/noise.glsl", foldDefault: true },
       { key: "sharedlib1", path: "shaders/sharedlib1.glsl", foldDefault: true },
    ]);
+
    if (!libSources)
       throw new Error("Could not load shader library");
 
@@ -141,6 +152,7 @@ async function setup(state) {
       const stages = [args.vertex, args.fragment];
       const output = [args.vertex, args.fragment];
       const implicitNoiseInclude = true;
+
       if (implicitNoiseInclude) {
          let libCode = MREditor.libMap.get('pnoise');
          for (let i = 0; i < 2; i++) {
@@ -150,8 +162,10 @@ async function setup(state) {
             output[i] = hdr + '\n#line 2 1\n' +
                '#include<pnoise>\n#line ' + (hdr.split('\n').length + 1) + ' 0' +
                stageCode.substring(hdrEndIdx + 1);
+
          }
       }
+
       MREditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
          output[0],
          output[1],
@@ -164,19 +178,18 @@ async function setup(state) {
       gl,
       "mainShader",
       {
-         // (New Info): example of how the pre-compilation function callback
-         // could be in the standard library instead if I put the function defintion
-         // elsewhere
+
          onNeedsCompilationDefault: onNeedsCompilationDefault,
          onAfterCompilation: (program) => {
             gl.useProgram(state.program = program);
             state.uColorLoc = gl.getUniformLocation(program, 'uColor');
+            
+            state.uMaterialLoc = gl.getUniformLocation(program, 'uMaterial');
             state.uCursorLoc = gl.getUniformLocation(program, 'uCursor');
             state.uModelLoc = gl.getUniformLocation(program, 'uModel');
             state.uProjLoc = gl.getUniformLocation(program, 'uProj');
             state.uTimeLoc = gl.getUniformLocation(program, 'uTime');
             state.uViewLoc = gl.getUniformLocation(program, 'uView');
-
          }
       },
       {
@@ -190,6 +203,7 @@ async function setup(state) {
          }
       }
    );
+
    if (!shaderSource)
       throw new Error("Could not load shader");
 
@@ -215,6 +229,35 @@ async function setup(state) {
    let aUV = gl.getAttribLocation(state.program, 'aUV');
    gl.enableVertexAttribArray(aUV);
    gl.vertexAttribPointer(aUV, 2, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 9);
+
+
+
+
+   // //CREATE FRAME BUFFER:
+   // function createFramebuffer(gl, size) {
+   //    var buffer = gl.createFramebuffer();
+   //    //bind framebuffer to texture
+   //    gl.bindFramebuffer(gl.FRAMEBUFFER, buffer);
+   //    var texture = createTexture(gl, size);
+   //    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+
+   //    return {
+   //      texture: texture,
+   //      buffer: buffer
+   //    };
+   //  }
+
+
+   // let image = null
+   // gl.activeTexture(gl.TEXTURE0);
+   // gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+   // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+   // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+   // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+   // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+   // gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+   // gl.generateMipmap(gl.TEXTURE_2D);
+
 
    state.calibrationCount = 0;
 
@@ -248,6 +291,7 @@ async function setup(state) {
 }
 
 function onStartFrame(t, state) {
+
 
    /*-----------------------------------------------------------------
 
@@ -368,10 +412,11 @@ function onStartFrame(t, state) {
       // console.log("FRAME");
       for (let i = 0; i < state.handles.length; i++) {
          state.handles[i].update();
+         state.handles[i].checkBounds(-EYE_HEIGHT);
       }
 
    }
-
+   
    releaseLocks(state);
    pollGrab(state);
 }
@@ -405,21 +450,21 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
    gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
 
    let prev_mesh = null;
+   let prev_width = 1;
+   let prev_mat = 0;
 
    const input = state.input;
 
-   // let drawShape = (shape, color) => {
-   //    gl.uniform3fv(state.uColorLoc, color);
-   //    gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
 
-   //    if (shape != prev_shape)
-   //       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape), gl.STATIC_DRAW);
-   //    gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
-   //    prev_shape = shape;
-   // }
-
-   let drawStrip = (mesh, color) => {
+   let drawStrip = (mesh, color, mat = 0) => {
       gl.uniform3fv(state.uColorLoc, color);
+      gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
+
+      if(prev_mat != mat){
+         gl.uniform1i(state.uMaterialLoc, mat);
+         prev_mat = mat;
+      }
+      
       gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
       if (mesh != prev_mesh)
          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.vertices), gl.STATIC_DRAW);
@@ -427,7 +472,17 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       prev_mesh = mesh;
    }
 
-   let drawLines = (mesh, color) => {
+   let drawLines = (mesh, color, width = 1) => {
+
+      if(width != prev_width){
+         gl.lineWidth(width);
+      }
+
+      if(prev_mat != MATERIALS.emission){
+         gl.uniform1i(state.uMaterialLoc, MATERIALS.emission);
+         prev_mat = MATERIALS.emission;
+      }
+
       gl.uniform3fv(state.uColorLoc, color);
       gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
       if (mesh != prev_mesh)
@@ -435,6 +490,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       gl.drawArrays(gl.LINES, 0, mesh.size);
       prev_mesh = mesh;
    }
+
+
 
    let patches = [];
 
@@ -491,38 +548,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
          });
 
       }
-
-
    }
-
-
-
-   //console.log(patches)
-
-   // if (state.handles) {
-   //    //FOR LOOP HEE
-
-   //    for(let i = 0; i < 1 * GRIDSIZE/3; i++){
-   //       for(let j = 0; j < 1 * GRIDSIZE/3; j++){
-   //          let idx = i * GRIDSIZE + j;
-   //          positions.push(state.handles[idx].position);
-   //       }
-   //    }
-
-   //    state.handles.forEach(function (handle) {
-   //       positions.push(handle.position);
-   //    });
-   // }
-
-
-   //let bezierPatch = new BezierPatch(positions, 12, 12);
-
-
-   m.save();
-   m.scale(10, 10, 10);
-   drawStrip(CG.sphere, [1, 1, 1]);
-   m.restore();
-
 
    m.save();
 
@@ -535,11 +561,9 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       if (selection == i) {
          drawStrip(CG.sphere, [1, 1, 1]);
 
-         // drawStrip(CG.sphere, [1, 1, 1]);
       } else {
-         drawStrip(CG.sphere, [0.33, .33, 0.0]);
+         drawStrip(CG.sphere, [0.33, .33, 0.0], 2);
 
-         // drawStrip(CG.sphere, [1, 1, 1]);
       }
       m.restore();
    }
@@ -555,9 +579,6 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
 
    }
 
-   // m.rotateY(t * 0.001);
-   // m.rotateZ(t * 0.002);
-   // m.rotateX(t * 0.003);
    if (input.RC) {
       if (input.RC.isButtonDown(2)) {
          patches.forEach(function (patch) {
@@ -579,6 +600,9 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       // drawLines(bezierPatch.patch, [1, 1, 1]);
    }
 
+
+
+
    m.restore();
 
 
@@ -593,7 +617,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       m.save();
       m.translate(-s, 0, .001);
       m.scale(.0125, .016, .036);
-      drawLines(CG.cube, color);
+      drawLines(CG.cube, color, 0.1);
       m.restore();
       m.save();
       m.translate(s, 0, .001);
@@ -629,16 +653,105 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
    }
 
    if (input.RC) {
-      if(input.RC.isButtonDown(2)){
+      if (input.RC.isButtonDown(2)) {
 
          drawController(input.RC, [1, 1, 1]);
-      }else{
+      } else {
 
          drawController(input.RC, [0, 1, 1]);
       }
    }
 
-   // drawControllers(state);
+
+   /**
+    * 
+    * ENV
+    * 
+    */
+
+   let envColour = [0,.2,.5]
+   //DRAW GRID
+   let floor = -EYE_HEIGHT
+   m.save();
+
+   //SUN
+   m.save();
+   m.translate(0, 0, -1000);
+   m.scale(100, 100, 1);
+   drawStrip(CG.sphere, [2, 2, 0], MATERIALS.sun);
+   m.restore();
+
+   //SUN STRIPES
+   m.save();
+   m.translate(0, 7, -990);
+   m.scale(100,5,1);
+   drawStrip(CG.cube, [0,0,0])
+   m.restore();
+
+   m.save();
+   m.translate(0, 18, -990);
+   m.scale(100,3,1);
+   drawStrip(CG.cube, [0,0,0])
+   m.restore();
+
+   m.save();
+   m.translate(0, 27, -990);
+   m.scale(100,2,1);
+   drawStrip(CG.cube, [0,0,0])
+   m.restore();
+
+   m.save();
+   m.translate(0, 35, -990);
+   m.scale(100,1,1);
+   drawStrip(CG.cube, [0,0,0])
+   m.restore();
+
+   //FLOOR
+   m.save();
+   m.translate(0, floor - 0.1, 0);
+   m.scale(1000, .01, 1000);
+   drawStrip(CG.sphere, [0, 0, 0]);
+   m.restore();
+
+
+   //FLOOR GRID
+   for (let x = -10; x < 10; x++) {
+      m.save();
+
+      m.scale(1, 1, 1000);
+      m.translate((x * 0.5) ** 3, -EYE_HEIGHT, 0);
+
+      drawLines(CG.line, envColour, 2);
+      m.restore();
+
+      m.save();
+      m.rotateY(Math.PI / 2);
+      m.scale(1, 1, 1000);
+      m.translate((x * 0.5) ** 3, -EYE_HEIGHT, 0);
+
+      drawLines(CG.line, envColour, 2);
+      m.restore();
+   }
+
+   
+   let tri = new Geometry(new Vector(0,40,-30), new Vector(0,0,0), CG.triangle);
+
+   m.save();
+   m.translate(tri.position.x, tri.position.y, tri.position.z);
+
+   m.scale(5,5,5);
+   m.rotateY(t * 0.001);
+   drawLines(tri.mesh, [1,0,1], 2)
+   // m.rotateY(Math.PI/3);
+   // drawLines(tri.mesh, [1,0,1], 2)
+   // m.rotateY(Math.PI/3);
+   // drawLines(tri.mesh, [1,0,1], 2)
+
+   m.restore();
+
+   m.restore();
+   
+
 
 }
 
@@ -819,10 +932,10 @@ function ControllerHandler(controller) {
    this.release = () => wasDown && !this.isDown();
    this.tip = () => {
       m.save();
-      let P = this.position();          // THIS CODE JUST MOVES
-      m.identity();                     // THE "HOT SPOT" OF THE
+      let P = this.position();            // THIS CODE JUST MOVES
+      m.identity();                       // THE "HOT SPOT" OF THE
       m.translate(P[0], P[1], P[2]);      // CONTROLLER TOWARD ITS
-      m.rotateQ(this.orientation());    // FAR TIP (FURTHER AWAY
+      m.rotateQ(this.orientation());      // FAR TIP (FURTHER AWAY
       m.translate(0, 0, -.03);            // FROM THE USER'S HAND).
       let v = m.value();
       m.restore();
@@ -846,10 +959,6 @@ function ControllerHandler(controller) {
 
 function drawControllers(state) {
    const input = state.input;
-
-
-
-
 
    // let drawHeadset = (position, orientation) => {
    //     //  let P = HS.position();'
@@ -952,6 +1061,8 @@ function drawControllers(state) {
    //         drawSyncController(lpos, lcontroller.orientation, [0, 1, 1]);
    //     }
    // }
-
-
 }
+
+
+
+

@@ -49,6 +49,7 @@ return f;
 uniform vec3  uColor;
 uniform vec3  uCursor; // CURSOR: xy=pos, z=mouse up/down
 uniform float uTime;   // TIME, IN SECONDS
+uniform int uMaterial;
 
 in vec2 vXY;           // POSITION ON IMAGE
 in vec3 vPos;          // POSITION
@@ -86,6 +87,37 @@ vec3 bumpSampler(vec3 v){
    return normalize(vec3(1,1,1));
 }
 
+vec3 handleShading(){
+
+   // vec3 blue = vec3(0,0,1);
+   vec3 purp = vec3(1,0,1);
+
+   // float gradient =  (vPos.y*vPos.y);
+   // vec3 col = mix(purp, blue,  gradient);
+
+   return purp;
+
+}
+
+vec3 sunShading(){
+
+   vec3 red = vec3(1,0,0);
+   vec3 yellow = vec3(1,1,0);
+
+   float gradient =  (vPos.y*vPos.y);
+   vec3 col = mix(red, yellow,  gradient);
+
+   return col;
+
+}
+
+vec3 emissiveShading(){
+
+
+   return uColor;
+
+}
+
 vec3 phongShading(){
    // vec3 normal = normalize(vNor);
    vec3 b = bumpSampler(vWorld.xyz * 10.123);
@@ -108,11 +140,12 @@ vec3 phongShading(){
 
    outColour += light.colour * ( diffuse ) ;
 
-   diffuse = max(vec3(0.,0.,0.), dot(light2.dir, normal) ) * diffuseMat;
+   // diffuse = max(vec3(0.,0.,0.), dot(light2.dir, normal) ) * diffuseMat;
    
-   R = 2. * normal * dot(light2.dir, normal) + light2.dir; 
+   // R = 2. * normal * dot(light2.dir, normal) + light2.dir; 
 
-   outColour += light2.colour * ( diffuse ) ;
+   // outColour += light2.colour * ( diffuse ) ;
+
 
    return outColour;
 }
@@ -126,14 +159,30 @@ void main() {
       vec3(2.,1.,1.) 
    );
 
-   light2 = Light(
-      normalize(vec3(-.5,.3, .2)), 
-      vec3(.5,.5, 1.) 
-   );
-   
-   
+   // light2 = Light(
+   //    normalize(vec3(-.5,.3, .2)), 
+   //    vec3(.5,.5, 1.) 
+   // );
 
-    vec3 color = phongShading();
+   
+    vec3 color;
+
+    switch(uMaterial){
+      case 0:
+         color = phongShading();
+         break;
+      case 1:
+         color = sunShading();
+         break;
+      case 2:
+         color = handleShading();
+         break;
+      case 3:
+         color = emissiveShading();
+         break;
+      default:
+         break;
+    }
 
     fragColor = vec4(sqrt(color), 1.0);
 

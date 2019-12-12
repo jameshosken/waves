@@ -36,7 +36,7 @@ void main(void) {
     gl_Position = pos;
     vXY = pos.xy / pos.z;
     vPos = aPos;
-    vNor = (vec4(aNor, 0.) * inverse(uModel)).xyz;
+    vNor = normalize((vec4(aNor, 0.) * inverse(uModel)).xyz );
     vTan = (vec4(aTan, 0.) * inverse(uModel)).xyz;
     vBiNor = normalize(cross(vNor, vTan));
     vUV = aUV * vec2(1.,-1.) + vec2(0.,1.);

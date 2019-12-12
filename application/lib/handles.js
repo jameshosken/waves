@@ -7,10 +7,17 @@ class Handle {
    }
 
    update() {
-      
       this.position= Vector.add(this.position, this.velocity);
       this.velocity = Vector.mult(this.velocity, 0.95);
+
       
+   }
+
+   checkBounds(floor){
+      if(this.position.y < floor){
+         this.position.y = floor;   
+         this.velocity.y *= -1;
+      }
    }
 
    setVelocity(v) {

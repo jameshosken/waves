@@ -193,6 +193,29 @@ CG.createCubeVertices = () => {
    //return V;
 }
 
+CG.createTriangleVertices = () => {
+   let V = [
+      -0.5, -0.5, 0,       -.5, -.5,  0,       -0,0,1,  0,0,
+      0.5,  -0.5, 0,       .5,  -.5,  0,       -0,0,1,  .33,.33,
+      0.5,  -0.5, 0,       .5,  -.5,  0,       -0,0,1,  .34,.34,
+      0,    .5,   0,       0,   1.0,    0,       -0,0,1,  .66,66,
+      0,    .5,   0,       0,   1.0,    0,       -0,0,1,  .67,.67,
+      -0.5, -0.5, 0,       -.5, -.5,  0,       -0,0,1,  1,1
+   ];
+   return {vertices: V, size: V.length / VERTEX_SIZE }
+}
+
+
+CG.createLineVertices = () => {
+   let V = [
+      0,0,-1,0,1,0,1,0,0,0,0,
+      0,0,1,0,1,0,1,0,0,1,1
+   ]
+
+   return { vertices: V, size: V.length / VERTEX_SIZE };
+   //return V;
+}
+
 
 CG.uvToVertex = (u, v, args, callback) => {
    let e = .001,
@@ -391,7 +414,7 @@ class ParametricMesh {
    constructor(M, N, callbackType, args) {
       // console.log("Creating Mesh!")
       this.vertices = ParametricMesh.createParametricMesh(M, N, callbackType, args);
-      
+
       this.size = this.vertices.length / VERTEX_SIZE
    }
 
@@ -415,14 +438,14 @@ class ParametricMesh {
 class ParametricGrid {
 
    constructor(M, N, callbackType, args, collision = false) {
-      
+
       this.vertices = ParametricGrid.createParametricGrid(M, N, callbackType, args);
       this.size = this.vertices.length / VERTEX_SIZE;
 
       this.collisionPoints = [];
 
-      if(collision){
-         this.collisionPoints = ParametricGrid.createCollisionGrid(M*2, N*2, callbackType, args);
+      if (collision) {
+         this.collisionPoints = ParametricGrid.createCollisionGrid(M * 3, N * 3, callbackType, args);
       }
 
    }
@@ -435,42 +458,42 @@ class ParametricGrid {
       let uInc = 1.0;
       let vInc = 1.0;
 
-      for (let row = 0; row < N; row++) {
+      for (let row = 0; row <= N; row++) {
 
-         //let uIncrement = (row % 2 == 0) ? -1 : 1;  // Determine traverse direction
+         for (let col = 0; col <= M; col++) {
 
-         for (let col = 0; col < M; col++) {
+            if (col != M) {
+               uv = {
+                  u: col / M,
+                  v: row / N
+               };
+               vertices = vertices.concat(callback(uv.u, uv.v, args));
 
-            uv = {
-               u: col / M,   // If row is even, start from right.
-               v: row / N              // Alternate rows
-            };
-            vertices = vertices.concat(callback(uv.u, uv.v, args));
+               uv = {
+                  u: (col + uInc) / M,
+                  v: row / N
+               };
+               vertices = vertices.concat(callback(uv.u, uv.v, args));
+            }
+            if (row != M) {
+               uv = {
+                  u: (col) / M,
+                  v: (row) / N
+               };
+               vertices = vertices.concat(callback(uv.u, uv.v, args));
 
-            uv = {
-               u: (col + uInc) / M,   // If row is even, start from right.
-               v: row / N              // Alternate rows
-            };
-            vertices = vertices.concat(callback(uv.u, uv.v, args));
-
-
-            uv = {
-               u: (col) / M,   // If row is even, start from right.
-               v: (row) / N              // Alternate rows
-            };
-            vertices = vertices.concat(callback(uv.u, uv.v, args));
-
-            uv = {
-               u: col / M,   // If row is even, start from right.
-               v: (row + vInc) / N              // Alternate rows
-            };
-            vertices = vertices.concat(callback(uv.u, uv.v, args));
+               uv = {
+                  u: col / M,
+                  v: (row + vInc) / N
+               };
+               vertices = vertices.concat(callback(uv.u, uv.v, args));
+            }
          }
       }
       return vertices;
    }
 
-   
+
    static createCollisionGrid(M, N, callback, args) {
 
       let points = [];
@@ -488,13 +511,21 @@ class ParametricGrid {
             };
             //Convert vertex back to vector (TODO: Make more effecient than this nonesense)
             let vertex = callback(uv.u, uv.v, args);
-            points.push(new Vector(vertex[0],vertex[1],vertex[2]));
+            points.push(new Vector(vertex[0], vertex[1], vertex[2]));
          }
       }
       return points;
    }
 }
 
+
+class Geometry {
+   constructor(pos, vel, type) {
+      this.position = pos;
+      this.velocity = vel;
+      this.mesh = CG.triangle;
+   }
+}
 
 
 /**
@@ -531,7 +562,9 @@ CG.sphere = new ParametricMesh(32, 16, CG.uvToSphere);
 
 CG.linesphere = new ParametricGrid(32, 16, CG.uvToSphere);
 
-CG.cube = CG.createCubeVertices();
+CG.cube     = CG.createCubeVertices();
+CG.triangle = CG.createTriangleVertices();
+CG.line     = CG.createLineVertices();
 // CG.cylinder = CG.createMeshVertices(32,  6, CG.uvToCylinder);
 // CG.torus    = CG.createMeshVertices(32, 16, CG.uvToTorus, 0.3);
 // CG.torus1   = CG.createMeshVertices(32, 16, CG.uvToTorus, 0.1);
