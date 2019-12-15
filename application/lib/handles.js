@@ -41,3 +41,22 @@ let getHandleIntersected = function (vec, state) {
 }
 
 
+class HitHandler{
+
+   constructor(){
+      this.hitState = false;
+      this.previousHitState = false;
+   }
+
+   updateHitState(b){
+      this.previousHitState = this.hitState;
+      this.hitState = b;
+   }
+
+   isNewHit(){
+      return (this.hitState == true && this.previousHitState == false)
+   }
+
+
+
+}
