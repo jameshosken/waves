@@ -157,10 +157,26 @@ CG.quadData = {
 }
 
 CG.createQuadVertices = () => {
-   return [
-      -1, -1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, -1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1,
-      1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, -1, -1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, -1, 1, 0, 0, 0, 1, 0, 0, 1, 0,
+   let V = [
+   //    -1, -1, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+   //     1,  1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 
+
+      -.5, .5, 0, 0, 0, 0, 1, 0, 0, 0, 1,
+      .5, .5, 0, 0, 0, 0, 1, 0, 0, 1, 1, 
+
+      -.5, -.5, 0, 0, 0, 0, 1, 0, 0, 0, 0, 
+      .5, -.5, 0, 0, 0, 0, 1, 0, 0, 1, 0,
+
+       
+      -.5,.5, 0, 0, 0, 0, 1, 0, 0, 0, 1,
+      -.5, -.5, 0, 0, 0, 0, 1, 0, 0, 0, 0, 
+
+      
+      .5, .5, 0, 0, 0, 0, 1, 0, 0, 1, 1, 
+      .5, -.5, 0, 0, 0, 0, 1, 0, 0, 1, 0
+      
    ];
+   return { vertices: V, size: V.length / VERTEX_SIZE }
 }
 
 CG.createCubeVertices = () => {
@@ -402,11 +418,11 @@ class Vector {
       return new Vector(v1.x * s, v1.y * s, v1.z * s)
    }
 
-   static zero(){
-      return new Vector(0,0,0);
+   static zero() {
+      return new Vector(0, 0, 0);
    }
-   static one(){
-      return new Vector(1,1,1);
+   static one() {
+      return new Vector(1, 1, 1);
    }
 }
 
@@ -547,24 +563,24 @@ class PhyscisBody {
 }
 
 class Transform {
-   constructor(pos = new Vector(0,0,0), rot = new Vector(0,0,0), scale = new Vector(1,1,1)) {
-      this.position  = pos;
-      this.rotation  = rot;
-      this.scale     = scale;
+   constructor(pos = new Vector(0, 0, 0), rot = new Vector(0, 0, 0), scale = new Vector(1, 1, 1)) {
+      this.position = pos;
+      this.rotation = rot;
+      this.scale = scale;
    }
 }
 
 //Based off Unity GameObject system 
 class Geometry {
    constructor(transform, mesh) {
-      this.mesh         = mesh;
-      this.transform    = transform;
-      this.physicsBody  = null;
+      this.mesh = mesh;
+      this.transform = transform;
+      this.physicsBody = null;
       this.age = 0;
    }
 
    addPhysicsBody(velocity = new Vector(0, 0, 0), angularMomentum = new Vector(0, 0, 0)) {
-      this.physicsBody     = new PhyscisBody(velocity, angularMomentum);
+      this.physicsBody = new PhyscisBody(velocity, angularMomentum);
    }
 
    applyTransform(m) {
@@ -583,7 +599,7 @@ class Geometry {
          this.transform.rotation.add(this.physicsBody.angularMomentum);
       }
 
-      this.age +=1;
+      this.age += 1;
    }
 }
 
@@ -624,9 +640,14 @@ CG.lowResSphere = new ParametricMesh(8, 8, CG.uvToSphere);
 
 CG.linesphere = new ParametricGrid(32, 16, CG.uvToSphere);
 
+CG.lowResLineSphere = new ParametricGrid(8, 8, CG.uvToSphere);
+
+
 CG.cube = CG.createCubeVertices();
 CG.triangle = CG.createTriangleVertices();
 CG.line = CG.createLineVertices();
+
+CG.square = CG.createQuadVertices();
 // CG.cylinder = CG.createMeshVertices(32,  6, CG.uvToCylinder);
 // CG.torus    = CG.createMeshVertices(32, 16, CG.uvToTorus, 0.3);
 // CG.torus1   = CG.createMeshVertices(32, 16, CG.uvToTorus, 0.1);

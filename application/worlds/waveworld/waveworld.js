@@ -22,7 +22,9 @@ const TABLE_HEIGHT = inchesToMeters(29);
 const TABLE_WIDTH = inchesToMeters(60);
 const TABLE_THICKNESS = inchesToMeters(11 / 8);
 const LEG_THICKNESS = inchesToMeters(2.5);
-const MAX_TRIANGLES = 500;
+const MAX_TRIANGLES = 100;
+
+const MAX_SQUARES = 100;
 
 let MATERIALS = {
    default: 0,
@@ -33,9 +35,13 @@ let MATERIALS = {
 
 let enableModeler = true;
 
-const GRIDSIZE = 1;
-const RES = 9;
-const COLLISIONTHRESHOLD = 0.1;
+const GRIDSIZE = 1; // How many patches are there (1 for best performance)
+const RES = 9; //REsolution of grid
+const COLLISIONTHRESHOLD = 0.05;
+
+
+
+
 
 
 ////////////////////////////// SCENE SPECIFIC CODE
@@ -75,16 +81,77 @@ let setupWorld = function (state) {
 
    if (state.triangles == null) {
       state.triangles = [];
-      let transform = new Transform(new Vector(0, 0, -0), new Vector(0, 0, 0), new Vector(5, 5, 5));
+      // let transform = new Transform(new Vector(0, 0, -0), new Vector(0, 0, 0), new Vector(5, 5, 5));
 
-      let tri = new Geometry(transform, CG.triangle);
-      tri.addPhysicsBody(new Vector(.1, 0, 0), new Vector(0, 0.001, 0));
-      state.triangles = [tri];
+      // let tri = new Geometry(transform, CG.triangle);
+      // tri.addPhysicsBody(new Vector(.1, 0, 0), new Vector(0, 0.001, 0));
+      // state.triangles = [tri];
+   }
+
+   if (state.squares == null) {
+      state.squares = [];
+      // let transform = new Transform(new Vector(0, 0, -0), new Vector(0, 0, 0), new Vector(5, 5, 5));
+
+      // let sq = new Geometry(transform, CG.square);
+      // tri.addPhysicsBody(new Vector(.1, 0, 0), new Vector(0, 0.001, 0));
+      // state.squares = [tri];
+   }
+
+   if (state.lines == null) {
+      state.lines = [];
+      // let transform = new Transform(new Vector(0, 0, -0), new Vector(0, 0, 0), new Vector(5, 5, 5));
+
+      // let tri = new Geometry(transform, CG.triangle);
+      // tri.addPhysicsBody(new Vector(.1, 0, 0), new Vector(0, 0.001, 0));
+      // state.triangles = [tri];
    }
 
    if (state.hitHandler == null) {
       state.hitHandler = new HitHandler();
    }
+
+
+   if (state.pianoSounds == null) {
+      state.pianoSounds = [];
+
+      for (let i = 1; i < 8; i++) {
+         let path = "assets/audio/pianoloud/"
+         let medTail = "-49-96.wav"
+
+         let loudTail = "-97-127.wav"
+
+         let Ab = path + "Ab" + i + loudTail;
+         let A = path + "A" + i + loudTail;
+         let Bb = path + "Bb" + i + loudTail;
+         let B = path + "B" + i + loudTail;
+         let C = path + "C" + i + loudTail;
+         let Db = path + "Db" + i + loudTail;
+         let D = path + "D" + i + loudTail;
+         let Eb = path + "Eb" + i + loudTail;
+         let E = path + "E" + i + loudTail;
+         let F = path + "F" + i + loudTail;
+         let Gb = path + "Gb" + i + loudTail;
+         let G = path + "G" + i + loudTail;
+
+
+         state.pianoSounds.push(C);
+         state.pianoSounds.push(Db);
+         state.pianoSounds.push(D);
+         state.pianoSounds.push(Eb);
+         state.pianoSounds.push(E);
+         state.pianoSounds.push(F);
+         state.pianoSounds.push(Gb);
+         state.pianoSounds.push(G);
+         state.pianoSounds.push(Ab);
+         state.pianoSounds.push(A);
+         state.pianoSounds.push(Bb);
+         state.pianoSounds.push(B);
+
+
+      }
+   }
+
+   console.log(state.pianoSounds)
 
 }
 
@@ -432,7 +499,8 @@ function onStartFrame(t, state) {
 
       prevRPos = rPos;
 
-
+      let closest = 1000;
+      let point = null;
       //If drum mode
       if (input.RC.isButtonDown(2)) {
 
@@ -440,8 +508,7 @@ function onStartFrame(t, state) {
          let rPos = new Vector(tip[0], tip[1], tip[2]);
 
          patches.forEach(function (patch) {
-            let closest = 1000;
-            let point = null;
+            
             // console.log(patch)
             patch.mesh.collisionPoints.forEach(function (collisionPoint) {
                let d = Vector.dist(rPos, collisionPoint);
@@ -451,52 +518,24 @@ function onStartFrame(t, state) {
                }
             });
 
-            if (closest < COLLISIONTHRESHOLD) {
-
-               state.hitHandler.updateHitState(true);
-
-               if (state.hitHandler.isNewHit()) {
-
-                  console.log("Tone!")
-                  console.log(point.y);
-                  state.audio.generateTone([point.x, point.y, point.z]);
-
-                  //harder hit = more tris
-                  let amt = Vector.mult(motion, 10).magnitude() + 1;
-                  state.intersectionSphere.vec = new Vector(point.x, point.y, point.z);
-                  state.intersectionSphere.contact = true;
-                  for (let i = 0; i < amt; i++) {
-
-                     let v = new Vector(
-                        (Math.random() * 2 - 1) * 0.01,
-                        (Math.random() * 2 - 1) * 0.01,
-                        (Math.random() * 2 - 1) * 0.01
-                     );
-                     let a = new Vector(
-                        (Math.random() * 2 - 1) * 0.01,
-                        (Math.random() * 2 - 1) * 0.01,
-                        (Math.random() * 2 - 1) * 0.01
-                     );
-                     let r = new Vector(
-                        (Math.random() * 2 - 1),
-                        (Math.random() * 2 - 1),
-                        (Math.random() * 2 - 1)
-                     );
-
-                     let t = new Transform(new Vector(rPos.x, rPos.y, rPos.z), r, new Vector(0.1, 0.1, 0.1));
-                     let obj = new Geometry(t, CG.triangle);
-                     obj.addPhysicsBody(v, a);
-
-                     state.triangles.push(obj);
-                  }
-               }
-
-
-            } else {
-               //Flag exit hit:
-               state.hitHandler.updateHitState(false);
-            }
          });
+
+         
+         if (closest < COLLISIONTHRESHOLD) {
+
+            state.hitHandler.updateHitState(true);
+
+            if (state.hitHandler.isNewHit()) {
+
+               handleNoteHit(point, state);
+
+            }
+
+
+         } else {
+            //Flag exit hit:
+            state.hitHandler.updateHitState(false);
+         }
       }
    }
 
@@ -514,13 +553,25 @@ function onStartFrame(t, state) {
    for (let i = 0; i < state.triangles.length; i++) {
       let tri = state.triangles[i];
       tri.update();
-
-      // if(tri.age > 1000){
-      //    state.triangles.splice(i,1);
-      // }
    }
    if (state.triangles.length > MAX_TRIANGLES) {
       state.triangles.shift();
+   }
+
+   for (let i = 0; i < state.squares.length; i++) {
+      let sq = state.squares[i];
+      sq.update();
+   }
+   if (state.squares.length > MAX_TRIANGLES) {
+      state.squares.shift();
+   }
+
+   for (let i = 0; i < state.lines.length; i++) {
+      let ln = state.lines[i];
+      ln.update();
+   }
+   if (state.lines.length > MAX_TRIANGLES) {
+      state.lines.shift();
    }
 
 
@@ -668,6 +719,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       let P = C.position(), s = C.isDown() ? .0125 : .0225;
 
       if (C.isButtonDown(2)) {
+         //Handle
          m.save();
          m.translate(P[0], P[1], P[2]);
          m.rotateQ(C.orientation());
@@ -676,12 +728,12 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
          m.scale(.01, .01, .05);
          drawLines(CG.cube, color, 0.1);
          m.restore();
-
+         //Hitter
          m.save();
          m.translate(0, 0, -0.02);
-         m.scale(.1, .1, .1);
-         m.rotateX(-Math.PI/2);
-         drawLines(CG.triangle, color, 0.1);
+         m.scale(.05, .05, .05);
+         m.rotateX(-Math.PI / 2);
+         drawLines(CG.lowResLineSphere, color, 0.1);
          m.restore();
          m.restore();
       } else {
@@ -817,7 +869,24 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
          drawLines(tri.mesh, [1, 0, 1], 2)
          m.restore();
       });
+   }
 
+   if (state.squares) {
+      state.squares.forEach(function (sq) {
+         m.save();
+         sq.applyTransform(m);
+         drawLines(sq.mesh, [1, 0, 1], 2)
+         m.restore();
+      });
+   }
+
+   if (state.lines) {
+      state.lines.forEach(function (line) {
+         m.save();
+         line.applyTransform(m);
+         drawLines(line.mesh, [1, 0, 1], 2)
+         m.restore();
+      });
    }
 
    m.restore();
@@ -834,10 +903,10 @@ function onEndFrame(t, state) {
 
    if (input.HS != null) {
       if (state.audio == null) {
-         state.audio = new SpatialAudioContext()
+         state.audio = new SpatialAudioContext(state.pianoSounds)
       }
 
-     
+
       if (state.audio.isPlaying) {
          state.audio.updateListener(input.HS.position(), input.HS.orientation());
       }
@@ -1043,6 +1112,68 @@ function ControllerHandler(controller) {
       return [v[12], v[13], v[14]];
    }
    let wasDown = false;
+}
+
+function map_range(value, low1, high1, low2, high2) {
+   return low2 + (high2 - low2) * (value - low1) / (high1 - low1);
+}
+
+
+function handleNoteHit(point, state){
+   
+
+   console.log("Tone!")
+
+   let toneToPlay = map_range(point.y, -1, 2, 0, state.pianoSounds.length);
+   console.log(point.y);
+   toneToPlay = Math.floor(toneToPlay);
+   console.log(toneToPlay);
+   let note = state.pianoSounds[toneToPlay]
+   console.log(note);
+   state.audio.playFileAt(note, [point.x, point.y, point.z])
+
+
+   //state.audio.generateTone([point.x, point.y, point.z]);
+
+   // //harder hit = more tris
+   // let amt = Vector.mult(motion, 10).magnitude() + 1;
+   // state.intersectionSphere.vec = new Vector(point.x, point.y, point.z);
+   // state.intersectionSphere.contact = true;
+
+   if (Math.random() < 0.5) {
+        createNewGeometryOnHit(point, CG.line, state.lines);
+   }
+   if (Math.random() < 0.5) {
+      createNewGeometryOnHit(point, CG.square, state.squares);
+   }
+   if (Math.random() < 0.5) {
+      createNewGeometryOnHit(point, CG.triangle, state.triangles);
+   }
+
+}
+
+
+function createNewGeometryOnHit(point, type, arr){
+   let v = new Vector(
+      (Math.random() * 2 - 1) * 0.01,
+      (Math.random() * 2 - 1) * 0.01,
+      (Math.random() * 2 - 1) * 0.01
+   );
+   let a = new Vector(
+      (Math.random() * 2 - 1) * 0.01,
+      (Math.random() * 2 - 1) * 0.01,
+      (Math.random() * 2 - 1) * 0.01
+   );
+   let r = new Vector(
+      (Math.random() * 2 - 1),
+      (Math.random() * 2 - 1),
+      (Math.random() * 2 - 1)
+   );
+   let t = new Transform(new Vector(point.x, point.y, point.z), r, new Vector(0.1, 0.1, 0.1));
+   let obj = new Geometry(t, type);
+   obj.addPhysicsBody(v, a);
+
+   arr.push(obj);
 }
 
 /********************

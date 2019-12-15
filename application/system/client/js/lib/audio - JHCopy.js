@@ -1,6 +1,6 @@
 class SpatialAudioContext {
 
-    constructor(files = []) {
+    constructor() {
 
         try {
             // it appears chrome supports up to 6 audio contexts per tab, so we either need to limit contexts created, or swap buffers and change positions
@@ -22,10 +22,9 @@ class SpatialAudioContext {
         // this.listeners = {};
         this.listener = this.context.listener;
 
-        files.forEach((f) => {
-            // console.log(f);
-            this.loadFile(f);
-        });
+        // files.forEach((f) => {
+        //     this.loadFile(f);
+        // });
 
         this.initGain();
         this.initReverb();
@@ -34,7 +33,7 @@ class SpatialAudioContext {
         this.startedAt = 0;
         this.playing = false;
 
-        this.wave = "sine";
+        this.wave = "square";
 
         //Useful for waveform generator?
         this.customWaveform = null;
@@ -81,14 +80,13 @@ class SpatialAudioContext {
 
         if (!(url in this.cache)) {
             console.log("invalid url, not currently loaded");
-            this.loadFile(url);
             return;
         }
 
-        // if (this.playing) {
-        //     console.log("already playing");
-        //     return;
-        // }
+        if (this.playing) {
+            console.log("already playing");
+            return;
+        }
 
 
         const source = this.context.createBufferSource();
@@ -213,6 +211,10 @@ class SpatialAudioContext {
 
         this.osc = this.playTone(freq);
 
+        let now = this.context.currentTime;
+        let dur = (this.envelope.attack + this.envelope.release)
+
+        this.osc.stop(now + dur);
 
 
     }
@@ -247,11 +249,6 @@ class SpatialAudioContext {
             .connect(this.context.destination);
 
         osc.start();
-        
-        // let now = this.context.currentTime;
-        let dur = (this.envelope.attack + this.envelope.release)
-
-        osc.stop(now + dur + 1);
         return osc;
 
     }
