@@ -7,17 +7,13 @@ class SpatialAudioContext {
             // TODO: check how many contexts are already open
             const ctx = window.AudioContext || window.webkitAudioContext;
             this.context = new ctx({
-                latencyHint: 'interactive',
-                sampleRate: 44100,
-            });
-        } catch (e) {
+                                latencyHint: 'interactive',
+                                sampleRate: 44100,
+                               });
+        } catch(e) {
             alert('Web Audio API is not supported in this browser');
         }
 
-        // store loaded buffers here
-        this.cache = {};
-
-        this.reverbCache = {};
         // keep track of listener objects associated with the files
         // this.listeners = {};
         this.listener = this.context.listener;
@@ -28,7 +24,6 @@ class SpatialAudioContext {
         });
 
         this.initGain();
-        this.initReverb();
         this.initPanner();
         this.pausedAt = 0;
         this.startedAt = 0;
@@ -53,7 +48,6 @@ class SpatialAudioContext {
         this.setupOcillator();
 
     };
-
 
     updateListener(head_position, head_orientation) {
         const rot = CG.matrixFromQuaternion(head_orientation);
@@ -139,9 +133,7 @@ class SpatialAudioContext {
         delete this.cache[url];
     };
 
-
     initPanner(innerAngle = 360, outerAngle = 360, outerGain = 0.2, refDistance = .1, maxDistance = 10000, rollOff = 1.5) {
-
         this.panner = new PannerNode(this.context, {
             // equalpower or HRTF
             panningModel: 'HRTF',
@@ -160,11 +152,11 @@ class SpatialAudioContext {
             coneOuterAngle: outerAngle,
             coneOuterGain: outerGain
         });
-
     };
 
     initGain() {
         this.gainNode = this.context.createGain();
+        this.gainNode.connect(this.context.destination);
     };
 
     setGain(level) {
@@ -236,16 +228,17 @@ class SpatialAudioContext {
         osc.type = this.wave;
         osc.frequency.value = freq;
 
-        // envGain.cancelScheduledValues(now);
-        envGainNode.gain.setValueAtTime(0, now);
-        envGainNode.gain.linearRampToValueAtTime(1, now + this.envelope.attack);
-        envGainNode.gain.linearRampToValueAtTime(0, now + this.envelope.attack + this.envelope.release);
+        this.oscillator = this.context.createOscillator();
+        let osc = this.oscillator;
         osc
             .connect(this.panner)
-            .connect(this.gainNode) // Spatial
-            .connect(envGainNode)       //Envelope
-            .connect(this.context.destination);
+            .connect(this.gainNode);
 
+        osc.frequency.value = freq;
+        osc.type = type;
+        // sine, square, sawtooth, triangle, custom
+        this.gainNode.gain.value = volume;
+        // 0 ~ 1
         osc.start();
         
         // let now = this.context.currentTime;
@@ -268,10 +261,4 @@ class SpatialAudioContext {
 
 };
 
-
-
-
-//   var vco = new VCO;
-//   var vca = new VCA;
-//   var envelope = new EnvelopeGenerator;
 
