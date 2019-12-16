@@ -344,7 +344,7 @@ async function setup(state) {
 
    Input.initKeyEvents();
 
-   this.audioContext = new SpatialAudioContext();
+   // this.audioContext = new SpatialAudioContext();
 
    setupWorld(state);
 
@@ -558,7 +558,7 @@ function onStartFrame(t, state) {
 
 
 
-   updatePatches(state);
+   //updatePatches(state);
 
    releaseLocks(state);
    pollGrab(state);
@@ -953,7 +953,7 @@ function onEndFrame(t, state) {
          state.audio.updateListener(input.HS.position(), input.HS.orientation());
       }
 
-      this.audioContext.updateListener(input.HS.position(), input.HS.orientation());
+      //this.audioContext.updateListener(input.HS.position(), input.HS.orientation());
 
       // Here you initiate the 360 spatial audio playback from a given position,
       // in this case controller position, this can be anything,
@@ -961,8 +961,8 @@ function onEndFrame(t, state) {
       // You must provide the path given, when you construct the audio context.
 
       // for example:
-      if (input.LC && input.LC.press())
-         this.audioContext.playToneAt(440.0, 0.5, 0.2, input.LC.position());
+      // if (input.LC && input.LC.press())
+      //    this.audioContext.playToneAt(440.0, 0.5, 0.2, input.LC.position());
    }
 
    if (input.LC) input.LC.onEndFrame();
