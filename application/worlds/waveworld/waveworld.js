@@ -50,6 +50,9 @@ let noise = new ImprovedNoise();
 let m = new Matrix();
 
 let setupWorld = function (state) {
+
+
+
    let scl = .5
    if (state.handles == undefined) {
       state.handles = [];
@@ -75,7 +78,6 @@ let setupWorld = function (state) {
 
    if (state.patches == null) {
       updatePatches(state);
-
    }
 
 
@@ -106,9 +108,6 @@ let setupWorld = function (state) {
       // state.triangles = [tri];
    }
 
-   if (state.hitHandler == null) {
-      state.hitHandler = new HitHandler();
-   }
 
 
    if (state.pianoSounds == null) {
@@ -460,75 +459,11 @@ function onStartFrame(t, state) {
    let patches = state.patches;
    state.intersectionSphere = { vec: new Vector(0, -1, 0), contact: false };
 
-   if (input.RC) {
 
-      let tip = input.RC.tip();
-      let rPos = new Vector(tip[0], tip[1], tip[2]);
+   handleController(input.RC, state);
 
-      selection = -1;
+   handleController(input.LC, state);
 
-      let handleSelection = getHandleIntersected(rPos, state);
-
-      let motion = Vector.sub(rPos, prevRPos);
-
-      if (handleSelection >= 0) {
-
-         selection = handleSelection;
-
-         if (input.RC.isDown()) {
-            state.handles[handleSelection].setVelocity(motion);
-         }
-      }
-
-      if (input.RC.isButtonDown(3)) {
-
-         //If button for moving is down, store velocity:
-         state.handles.forEach(function (handle) {
-            handle.setVelocity(motion);
-         });
-      }
-
-      prevRPos = rPos;
-
-      let closest = 1000;
-      let point = null;
-      //If drum mode
-      if (input.RC.isButtonDown(2)) {
-
-         let tip = input.RC.tip();
-         let rPos = new Vector(tip[0], tip[1], tip[2]);
-
-         patches.forEach(function (patch) {
-            
-            // console.log(patch)
-            patch.mesh.collisionPoints.forEach(function (collisionPoint) {
-               let d = Vector.dist(rPos, collisionPoint);
-               if (d < closest) {
-                  closest = d;
-                  point = collisionPoint;
-               }
-            });
-
-         });
-
-         
-         if (closest < COLLISIONTHRESHOLD) {
-
-            state.hitHandler.updateHitState(true);
-
-            if (state.hitHandler.isNewHit()) {
-
-               handleNoteHit(point, state);
-
-            }
-
-
-         } else {
-            //Flag exit hit:
-            state.hitHandler.updateHitState(false);
-         }
-      }
-   }
 
    if (state.handles) {
       // console.log("FRAME");
@@ -536,7 +471,6 @@ function onStartFrame(t, state) {
          state.handles[i].update();
          state.handles[i].checkBounds(-EYE_HEIGHT);
       }
-
    }
 
 
@@ -572,6 +506,8 @@ function onStartFrame(t, state) {
    releaseLocks(state);
    pollGrab(state);
 }
+
+
 
 
 
@@ -677,28 +613,17 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
 
    }
 
-   if (input.RC) {
-      if (input.RC.isButtonDown(2)) {
-         patches.forEach(function (patch) {
-            drawLines(patch.mesh, [1, 0, 1]);
-         })
-
-      } else {
-         patches.forEach(function (patch) {
-
-            drawLines(patch.mesh, [1, 0, 1]);
-         })
-         // drawLines(bezierPatch.patch, [1, 1, 1]);
-      }
-   } else {
-      patches.forEach(function (patch) {
-
-         drawLines(patch.mesh, [1, 0, 0]);
-      })
-      // drawLines(bezierPatch.patch, [1, 1, 1]);
-   }
+   
 
 
+
+   /**
+    * DRAW PATCHES
+    */
+
+   patches.forEach(function (patch) {
+      drawLines(patch.mesh, [1, 0, 1]);
+   })
 
 
    m.restore();
@@ -892,28 +817,20 @@ function onEndFrame(t, state) {
 
    const input = state.input;
 
-
-
    if (input.HS != null) {
-      if (state.audio == null) {
-         state.audio = new SpatialAudioContext(state.pianoSounds)
+
+      if (state.audioContext == null) {
+         state.audioContext = new SpatialAudioContext(state.pianoSounds);
+      }
+
+      //if (state.audio.isPlaying) {
+      if (state.audioContext != null) {
+         state.audioContext.updateListener(input.HS.position(), input.HS.orientation());
       }
 
 
-      if (state.audio.isPlaying) {
-         state.audio.updateListener(input.HS.position(), input.HS.orientation());
-      }
 
-      //this.audioContext.updateListener(input.HS.position(), input.HS.orientation());
 
-      if (input.LC && input.LC.press()) {
-         // state.audio.playFileAt('assets/audio/blop.wav', input.LC.position());
-         // state.audio.generateTone();
-      }
-
-      // for example:
-      // if (input.LC && input.LC.press())
-      //    this.audioContext.playToneAt(440.0, 0.5, 0.2, input.LC.position());
    }
 
 
@@ -1116,8 +1033,8 @@ function map_range(value, low1, high1, low2, high2) {
 }
 
 
-function handleNoteHit(point, state){
-   
+function handleNoteHit(point, state) {
+
 
    console.log("Tone!")
 
@@ -1127,7 +1044,7 @@ function handleNoteHit(point, state){
    console.log(toneToPlay);
    let note = state.pianoSounds[toneToPlay]
    console.log(note);
-   state.audio.playFileAt(note, [point.x, point.y, point.z])
+   state.audioContext.playFileAt(note, [point.x, point.y, point.z])
 
 
    //state.audio.generateTone([point.x, point.y, point.z]);
@@ -1138,7 +1055,7 @@ function handleNoteHit(point, state){
    // state.intersectionSphere.contact = true;
 
    if (Math.random() < 0.5) {
-        createNewGeometryOnHit(point, CG.line, state.lines);
+      createNewGeometryOnHit(point, CG.line, state.lines);
    }
    if (Math.random() < 0.5) {
       createNewGeometryOnHit(point, CG.square, state.squares);
@@ -1150,7 +1067,7 @@ function handleNoteHit(point, state){
 }
 
 
-function createNewGeometryOnHit(point, type, arr){
+function createNewGeometryOnHit(point, type, arr) {
    let v = new Vector(
       (Math.random() * 2 - 1) * 0.01,
       (Math.random() * 2 - 1) * 0.01,
@@ -1286,3 +1203,72 @@ function drawControllers(state) {
 
 
 
+function handleController(controller, state) {
+   if (controller) {
+
+      let tip = controller.tip();
+      let pos = new Vector(tip[0], tip[1], tip[2]);
+      let patches = state.patches;
+
+      if (controller.prevPos == null) {
+         controller.prevPos = new Vector(0, 0, 0);
+      }
+
+      //Each controller gets its own hit handler:
+      if (controller.hitHandler == null) {
+         controller.hitHandler = new HitHandler();
+      }
+
+      selection = -1;
+
+      let handleSelection = getHandleIntersected(pos, state);
+
+      let motion = Vector.sub(pos, controller.prevPos);
+
+      if (handleSelection >= 0) {
+
+         selection = handleSelection;
+
+         if (controller.isDown()) {
+            state.handles[handleSelection].setVelocity(motion);
+         }
+      }
+
+      if (controller.isButtonDown(3)) {
+
+         //If button for moving is down, store velocity:
+         state.handles.forEach(function (handle) {
+            handle.setVelocity(motion);
+         });
+      }
+
+      controller.prevPos = pos;
+
+      let closest = 1000;
+      let point = null;
+      //If drum mode
+      if (controller.isButtonDown(2)) {
+
+         patches.forEach(function (patch) {
+
+            patch.mesh.collisionPoints.forEach(function (collisionPoint) {
+               let d = Vector.dist(pos, collisionPoint);
+               if (d < closest) {
+                  closest = d;
+                  point = collisionPoint;
+               }
+            });
+         });
+
+         if (closest < COLLISIONTHRESHOLD) {
+            controller.hitHandler.updateHitState(true);
+            if (controller.hitHandler.isNewHit()) {
+               handleNoteHit(point, state);
+            }
+         } else {
+            //Flag exit hit:
+            controller.hitHandler.updateHitState(false);
+         }
+      }
+   }
+}

@@ -85,12 +85,8 @@ class SpatialAudioContext {
             return;
         }
 
-        // if (this.playing) {
-        //     console.log("already playing");
-        //     return;
-        // }
-
-
+       
+        
         const source = this.context.createBufferSource();
         source.buffer = this.cache[url];
 
@@ -105,15 +101,17 @@ class SpatialAudioContext {
         source.start(this.context.currentTime + time, offset);
 
         let timer = setTimeout(() => {
-            this.playing = false;
-        }, source.buffer.duration * 1000);
+            this.stop(source);
+            // this.playing = false;
+        }, source.buffer.duration*1000);
 
         this.playing = true;
 
     };
 
-    stop(url) {
-        this.cache[url].stop();
+    stop(source) {
+        source.stop();
+        // this.cache[url].stop();
         this.playing = false;
     };
 
