@@ -22,13 +22,9 @@ const TABLE_HEIGHT = inchesToMeters(29);
 const TABLE_WIDTH = inchesToMeters(60);
 const TABLE_THICKNESS = inchesToMeters(11 / 8);
 const LEG_THICKNESS = inchesToMeters(2.5);
-<<<<<<< HEAD
 const MAX_TRIANGLES = 100;
 
 const MAX_SQUARES = 100;
-=======
-const MAX_TRIANGLES = 500;
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
 
 let MATERIALS = {
    default: 0,
@@ -39,7 +35,6 @@ let MATERIALS = {
 
 let enableModeler = true;
 
-<<<<<<< HEAD
 const GRIDSIZE = 1; // How many patches are there (1 for best performance)
 const RES = 9; //REsolution of grid
 const COLLISIONTHRESHOLD = 0.05;
@@ -47,11 +42,6 @@ const COLLISIONTHRESHOLD = 0.05;
 
 
 
-=======
-const GRIDSIZE = 1;
-const RES = 9;
-const COLLISIONTHRESHOLD = 0.1;
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
 
 
 ////////////////////////////// SCENE SPECIFIC CODE
@@ -91,7 +81,6 @@ let setupWorld = function (state) {
 
    if (state.triangles == null) {
       state.triangles = [];
-<<<<<<< HEAD
       // let transform = new Transform(new Vector(0, 0, -0), new Vector(0, 0, 0), new Vector(5, 5, 5));
 
       // let tri = new Geometry(transform, CG.triangle);
@@ -115,19 +104,11 @@ let setupWorld = function (state) {
       // let tri = new Geometry(transform, CG.triangle);
       // tri.addPhysicsBody(new Vector(.1, 0, 0), new Vector(0, 0.001, 0));
       // state.triangles = [tri];
-=======
-      let transform = new Transform(new Vector(0, 0, -0), new Vector(0, 0, 0), new Vector(5, 5, 5));
-
-      let tri = new Geometry(transform, CG.triangle);
-      tri.addPhysicsBody(new Vector(.1, 0, 0), new Vector(0, 0.001, 0));
-      state.triangles = [tri];
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
    }
 
    if (state.hitHandler == null) {
       state.hitHandler = new HitHandler();
    }
-<<<<<<< HEAD
 
 
    if (state.pianoSounds == null) {
@@ -171,8 +152,6 @@ let setupWorld = function (state) {
    }
 
    console.log(state.pianoSounds)
-=======
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
 
 }
 
@@ -369,20 +348,7 @@ async function setup(state) {
 
    Input.initKeyEvents();
 
-<<<<<<< HEAD
    // this.audioContext = new SpatialAudioContext();
-=======
-   // load files into a spatial audio context for playback later - the path will be needed to reference this source later
-   // this.audioContext1 = new SpatialAudioContext([
-   //    'assets/audio/blop.wav'
-   // ]);
-
-   // this.audioContext2 = new SpatialAudioContext([
-   //    'assets/audio/peacock.wav'
-   // ]);
-
-   // = ;
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
 
    setupWorld(state);
 
@@ -524,12 +490,8 @@ function onStartFrame(t, state) {
 
       prevRPos = rPos;
 
-<<<<<<< HEAD
       let closest = 1000;
       let point = null;
-=======
-
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
       //If drum mode
       if (input.RC.isButtonDown(2)) {
 
@@ -537,12 +499,7 @@ function onStartFrame(t, state) {
          let rPos = new Vector(tip[0], tip[1], tip[2]);
 
          patches.forEach(function (patch) {
-<<<<<<< HEAD
             
-=======
-            let closest = 1000;
-            let point = null;
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
             // console.log(patch)
             patch.mesh.collisionPoints.forEach(function (collisionPoint) {
                let d = Vector.dist(rPos, collisionPoint);
@@ -552,7 +509,6 @@ function onStartFrame(t, state) {
                }
             });
 
-<<<<<<< HEAD
          });
 
          
@@ -571,54 +527,6 @@ function onStartFrame(t, state) {
             //Flag exit hit:
             state.hitHandler.updateHitState(false);
          }
-=======
-            if (closest < COLLISIONTHRESHOLD) {
-
-               state.hitHandler.updateHitState(true);
-
-               if (state.hitHandler.isNewHit()) {
-
-                  console.log("Tone!")
-                  console.log(point.y);
-                  state.audio.generateTone([point.x, point.y, point.z]);
-
-                  //harder hit = more tris
-                  let amt = Vector.mult(motion, 10).magnitude() + 1;
-                  state.intersectionSphere.vec = new Vector(point.x, point.y, point.z);
-                  state.intersectionSphere.contact = true;
-                  for (let i = 0; i < amt; i++) {
-
-                     let v = new Vector(
-                        (Math.random() * 2 - 1) * 0.01,
-                        (Math.random() * 2 - 1) * 0.01,
-                        (Math.random() * 2 - 1) * 0.01
-                     );
-                     let a = new Vector(
-                        (Math.random() * 2 - 1) * 0.01,
-                        (Math.random() * 2 - 1) * 0.01,
-                        (Math.random() * 2 - 1) * 0.01
-                     );
-                     let r = new Vector(
-                        (Math.random() * 2 - 1),
-                        (Math.random() * 2 - 1),
-                        (Math.random() * 2 - 1)
-                     );
-
-                     let t = new Transform(new Vector(rPos.x, rPos.y, rPos.z), r, new Vector(0.1, 0.1, 0.1));
-                     let obj = new Geometry(t, CG.triangle);
-                     obj.addPhysicsBody(v, a);
-
-                     state.triangles.push(obj);
-                  }
-               }
-
-
-            } else {
-               //Flag exit hit:
-               state.hitHandler.updateHitState(false);
-            }
-         });
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
       }
    }
 
@@ -636,19 +544,11 @@ function onStartFrame(t, state) {
    for (let i = 0; i < state.triangles.length; i++) {
       let tri = state.triangles[i];
       tri.update();
-<<<<<<< HEAD
-=======
-
-      // if(tri.age > 1000){
-      //    state.triangles.splice(i,1);
-      // }
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
    }
    if (state.triangles.length > MAX_TRIANGLES) {
       state.triangles.shift();
    }
 
-<<<<<<< HEAD
    for (let i = 0; i < state.squares.length; i++) {
       let sq = state.squares[i];
       sq.update();
@@ -667,12 +567,7 @@ function onStartFrame(t, state) {
 
 
 
-   //updatePatches(state);
-=======
-
-
    updatePatches(state);
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
 
    releaseLocks(state);
    pollGrab(state);
@@ -815,10 +710,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       let P = C.position(), s = C.isDown() ? .0125 : .0225;
 
       if (C.isButtonDown(2)) {
-<<<<<<< HEAD
          //Handle
-=======
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
          m.save();
          m.translate(P[0], P[1], P[2]);
          m.rotateQ(C.orientation());
@@ -827,21 +719,12 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
          m.scale(.01, .01, .05);
          drawLines(CG.cube, color, 0.1);
          m.restore();
-<<<<<<< HEAD
          //Hitter
          m.save();
          m.translate(0, 0, -0.02);
          m.scale(.05, .05, .05);
          m.rotateX(-Math.PI / 2);
          drawLines(CG.lowResLineSphere, color, 0.1);
-=======
-
-         m.save();
-         m.translate(0, 0, -0.02);
-         m.scale(.1, .1, .1);
-         m.rotateX(-Math.PI/2);
-         drawLines(CG.triangle, color, 0.1);
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
          m.restore();
          m.restore();
       } else {
@@ -881,11 +764,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
          m.restore();
          m.restore();
       }
-<<<<<<< HEAD
 
-      drawLines(CG.cube, [1, 1, 1,]);
-=======
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
+      //drawLines(CG.cube, [1, 1, 1,]);
 
    }
 
@@ -982,7 +862,6 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
          drawLines(tri.mesh, [1, 0, 1], 2)
          m.restore();
       });
-<<<<<<< HEAD
    }
 
    if (state.squares) {
@@ -1001,9 +880,6 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
          drawLines(line.mesh, [1, 0, 1], 2)
          m.restore();
       });
-=======
-
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
    }
 
    m.restore();
@@ -1020,7 +896,6 @@ function onEndFrame(t, state) {
 
    if (input.HS != null) {
       if (state.audio == null) {
-<<<<<<< HEAD
          state.audio = new SpatialAudioContext(state.pianoSounds)
       }
 
@@ -1030,28 +905,15 @@ function onEndFrame(t, state) {
       }
 
       //this.audioContext.updateListener(input.HS.position(), input.HS.orientation());
-=======
-         state.audio = new SpatialAudioContext()
-      }
-
-     
-      if (state.audio.isPlaying) {
-         state.audio.updateListener(input.HS.position(), input.HS.orientation());
-      }
-
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
 
       if (input.LC && input.LC.press()) {
          // state.audio.playFileAt('assets/audio/blop.wav', input.LC.position());
          // state.audio.generateTone();
       }
 
-<<<<<<< HEAD
       // for example:
       // if (input.LC && input.LC.press())
       //    this.audioContext.playToneAt(440.0, 0.5, 0.2, input.LC.position());
-=======
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
    }
 
 

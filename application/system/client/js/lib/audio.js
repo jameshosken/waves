@@ -1,10 +1,6 @@
 class SpatialAudioContext {
 
-<<<<<<< HEAD
     constructor(files = []) {
-=======
-    constructor() {
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
 
         try {
             // it appears chrome supports up to 6 audio contexts per tab, so we either need to limit contexts created, or swap buffers and change positions
@@ -26,16 +22,10 @@ class SpatialAudioContext {
         // this.listeners = {};
         this.listener = this.context.listener;
 
-<<<<<<< HEAD
         files.forEach((f) => {
             // console.log(f);
             this.loadFile(f);
         });
-=======
-        // files.forEach((f) => {
-        //     this.loadFile(f);
-        // });
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
 
         this.initGain();
         this.initReverb();
@@ -44,11 +34,7 @@ class SpatialAudioContext {
         this.startedAt = 0;
         this.playing = false;
 
-<<<<<<< HEAD
-        this.wave = "sine";
-=======
-        this.wave = "square";
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
+        this.wave = "sawtooth";
 
         //Useful for waveform generator?
         this.customWaveform = null;
@@ -95,7 +81,6 @@ class SpatialAudioContext {
 
         if (!(url in this.cache)) {
             console.log("invalid url, not currently loaded");
-<<<<<<< HEAD
             this.loadFile(url);
             return;
         }
@@ -104,15 +89,6 @@ class SpatialAudioContext {
         //     console.log("already playing");
         //     return;
         // }
-=======
-            return;
-        }
-
-        if (this.playing) {
-            console.log("already playing");
-            return;
-        }
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
 
 
         const source = this.context.createBufferSource();
@@ -237,7 +213,6 @@ class SpatialAudioContext {
 
         this.osc = this.playTone(freq);
 
-<<<<<<< HEAD
 
 
     }
@@ -260,12 +235,6 @@ class SpatialAudioContext {
 
         osc.type = this.wave;
         osc.frequency.value = freq;
-=======
-        let now = this.context.currentTime;
-        let dur = (this.envelope.attack + this.envelope.release)
-
-        this.osc.stop(now + dur);
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
 
 
     }
@@ -300,14 +269,11 @@ class SpatialAudioContext {
             .connect(this.context.destination);
 
         osc.start();
-<<<<<<< HEAD
         
         // let now = this.context.currentTime;
         let dur = (this.envelope.attack + this.envelope.release)
 
         osc.stop(now + dur + 1);
-=======
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
         return osc;
 
     }
@@ -325,12 +291,3 @@ class SpatialAudioContext {
 };
 
 
-<<<<<<< HEAD
-=======
-
-
-//   var vco = new VCO;
-//   var vca = new VCA;
-//   var envelope = new EnvelopeGenerator;
-
->>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
