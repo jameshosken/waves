@@ -1,35 +1,54 @@
 class SpatialAudioContext {
 
+<<<<<<< HEAD
     constructor(files = []) {
+=======
+    constructor() {
+>>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
 
         try {
             // it appears chrome supports up to 6 audio contexts per tab, so we either need to limit contexts created, or swap buffers and change positions
             // TODO: check how many contexts are already open
             const ctx = window.AudioContext || window.webkitAudioContext;
             this.context = new ctx({
-                                latencyHint: 'interactive',
-                                sampleRate: 44100,
-                               });
-        } catch(e) {
+                latencyHint: 'interactive',
+                sampleRate: 44100,
+            });
+        } catch (e) {
             alert('Web Audio API is not supported in this browser');
         }
 
+        // store loaded buffers here
+        this.cache = {};
+
+        this.reverbCache = {};
         // keep track of listener objects associated with the files
         // this.listeners = {};
         this.listener = this.context.listener;
 
+<<<<<<< HEAD
         files.forEach((f) => {
             // console.log(f);
             this.loadFile(f);
         });
+=======
+        // files.forEach((f) => {
+        //     this.loadFile(f);
+        // });
+>>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
 
         this.initGain();
+        this.initReverb();
         this.initPanner();
         this.pausedAt = 0;
         this.startedAt = 0;
         this.playing = false;
 
+<<<<<<< HEAD
         this.wave = "sine";
+=======
+        this.wave = "square";
+>>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
 
         //Useful for waveform generator?
         this.customWaveform = null;
@@ -48,6 +67,7 @@ class SpatialAudioContext {
         this.setupOcillator();
 
     };
+
 
     updateListener(head_position, head_orientation) {
         const rot = CG.matrixFromQuaternion(head_orientation);
@@ -75,6 +95,7 @@ class SpatialAudioContext {
 
         if (!(url in this.cache)) {
             console.log("invalid url, not currently loaded");
+<<<<<<< HEAD
             this.loadFile(url);
             return;
         }
@@ -83,6 +104,15 @@ class SpatialAudioContext {
         //     console.log("already playing");
         //     return;
         // }
+=======
+            return;
+        }
+
+        if (this.playing) {
+            console.log("already playing");
+            return;
+        }
+>>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
 
 
         const source = this.context.createBufferSource();
@@ -133,7 +163,9 @@ class SpatialAudioContext {
         delete this.cache[url];
     };
 
+
     initPanner(innerAngle = 360, outerAngle = 360, outerGain = 0.2, refDistance = .1, maxDistance = 10000, rollOff = 1.5) {
+
         this.panner = new PannerNode(this.context, {
             // equalpower or HRTF
             panningModel: 'HRTF',
@@ -152,11 +184,11 @@ class SpatialAudioContext {
             coneOuterAngle: outerAngle,
             coneOuterGain: outerGain
         });
+
     };
 
     initGain() {
         this.gainNode = this.context.createGain();
-        this.gainNode.connect(this.context.destination);
     };
 
     setGain(level) {
@@ -205,6 +237,35 @@ class SpatialAudioContext {
 
         this.osc = this.playTone(freq);
 
+<<<<<<< HEAD
+
+
+    }
+
+    reset() {
+
+
+        this.osc = null;
+
+
+    }
+
+    playTone(freq) {
+        // osc.connect(this.gainNode);
+        this.isPlaying = true;
+
+        let now = this.context.currentTime;
+        let osc = this.context.createOscillator();
+        let envGainNode = this.context.createGain();
+
+        osc.type = this.wave;
+        osc.frequency.value = freq;
+=======
+        let now = this.context.currentTime;
+        let dur = (this.envelope.attack + this.envelope.release)
+
+        this.osc.stop(now + dur);
+>>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
 
 
     }
@@ -228,23 +289,25 @@ class SpatialAudioContext {
         osc.type = this.wave;
         osc.frequency.value = freq;
 
-        this.oscillator = this.context.createOscillator();
-        let osc = this.oscillator;
+        // envGain.cancelScheduledValues(now);
+        envGainNode.gain.setValueAtTime(0, now);
+        envGainNode.gain.linearRampToValueAtTime(1, now + this.envelope.attack);
+        envGainNode.gain.linearRampToValueAtTime(0, now + this.envelope.attack + this.envelope.release);
         osc
             .connect(this.panner)
-            .connect(this.gainNode);
+            .connect(this.gainNode) // Spatial
+            .connect(envGainNode)       //Envelope
+            .connect(this.context.destination);
 
-        osc.frequency.value = freq;
-        osc.type = type;
-        // sine, square, sawtooth, triangle, custom
-        this.gainNode.gain.value = volume;
-        // 0 ~ 1
         osc.start();
+<<<<<<< HEAD
         
         // let now = this.context.currentTime;
         let dur = (this.envelope.attack + this.envelope.release)
 
         osc.stop(now + dur + 1);
+=======
+>>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
         return osc;
 
     }
@@ -262,3 +325,12 @@ class SpatialAudioContext {
 };
 
 
+<<<<<<< HEAD
+=======
+
+
+//   var vco = new VCO;
+//   var vca = new VCA;
+//   var envelope = new EnvelopeGenerator;
+
+>>>>>>> parent of 7b1c987... Merge pull request #2 from GuYoupeng/master
