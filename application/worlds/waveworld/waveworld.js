@@ -14,14 +14,7 @@ const inchesToMeters = inches => inches * 0.0254;
 const metersToInches = meters => meters / 0.0254;
 
 const EYE_HEIGHT = inchesToMeters(69);
-const HALL_LENGTH = inchesToMeters(306);
-const HALL_WIDTH = inchesToMeters(215);
 const RING_RADIUS = 0.0425;
-const TABLE_DEPTH = inchesToMeters(30);
-const TABLE_HEIGHT = inchesToMeters(29);
-const TABLE_WIDTH = inchesToMeters(60);
-const TABLE_THICKNESS = inchesToMeters(11 / 8);
-const LEG_THICKNESS = inchesToMeters(2.5);
 const MAX_TRIANGLES = 100;
 
 const MAX_SQUARES = 100;
@@ -39,7 +32,7 @@ const GRIDSIZE = 1; // How many patches are there (1 for best performance)
 const RES = 9; //REsolution of grid
 const COLLISIONTHRESHOLD = 0.05;
 
-
+const SYNTH = false;
 
 
 
@@ -50,8 +43,6 @@ let noise = new ImprovedNoise();
 let m = new Matrix();
 
 let setupWorld = function (state) {
-
-
 
    let scl = .5
    if (state.handles == undefined) {
@@ -83,29 +74,15 @@ let setupWorld = function (state) {
 
    if (state.triangles == null) {
       state.triangles = [];
-      // let transform = new Transform(new Vector(0, 0, -0), new Vector(0, 0, 0), new Vector(5, 5, 5));
-
-      // let tri = new Geometry(transform, CG.triangle);
-      // tri.addPhysicsBody(new Vector(.1, 0, 0), new Vector(0, 0.001, 0));
-      // state.triangles = [tri];
+   
    }
 
    if (state.squares == null) {
       state.squares = [];
-      // let transform = new Transform(new Vector(0, 0, -0), new Vector(0, 0, 0), new Vector(5, 5, 5));
-
-      // let sq = new Geometry(transform, CG.square);
-      // tri.addPhysicsBody(new Vector(.1, 0, 0), new Vector(0, 0.001, 0));
-      // state.squares = [tri];
    }
 
    if (state.lines == null) {
       state.lines = [];
-      // let transform = new Transform(new Vector(0, 0, -0), new Vector(0, 0, 0), new Vector(5, 5, 5));
-
-      // let tri = new Geometry(transform, CG.triangle);
-      // tri.addPhysicsBody(new Vector(.1, 0, 0), new Vector(0, 0.001, 0));
-      // state.triangles = [tri];
    }
 
 
@@ -157,6 +134,7 @@ let setupWorld = function (state) {
 let updatePatches = function (state) {
    state.patches = [];
 
+   //Allows for more than 1 patch but for performance sake our demo is 1
    for (let gridX = 0; gridX < GRIDSIZE; gridX++) {
 
       for (let gridY = 0; gridY < GRIDSIZE; gridY++) {
@@ -176,6 +154,45 @@ let updatePatches = function (state) {
          }
 
          state.patches.push(new BezierPatch(positions, RES, RES));
+      }
+   }
+}
+
+let updateObjects = function(state){
+   /**
+    * UPDATE OBJECTS HERE
+    */
+   for (let i = 0; i < state.triangles.length; i++) {
+      let tri = state.triangles[i];
+      tri.update();
+   }
+   if (state.triangles.length > MAX_TRIANGLES) {
+      state.triangles.shift();
+   }
+
+   for (let i = 0; i < state.squares.length; i++) {
+      let sq = state.squares[i];
+      sq.update();
+   }
+   if (state.squares.length > MAX_TRIANGLES) {
+      state.squares.shift();
+   }
+
+   for (let i = 0; i < state.lines.length; i++) {
+      let ln = state.lines[i];
+      ln.update();
+   }
+   if (state.lines.length > MAX_TRIANGLES) {
+      state.lines.shift();
+   }
+}
+
+
+let updateHandles = function(state){
+   if (state.handles) {
+      for (let i = 0; i < state.handles.length; i++) {
+         state.handles[i].update();
+         state.handles[i].checkBounds(-EYE_HEIGHT);
       }
    }
 }
@@ -219,8 +236,7 @@ async function onReload(state) {
 }
 
 async function onExit(state) {
-   // called when world is switched
-   // de-initialize / close scene-specific resources here
+
    console.log("Goodbye! =)");
 }
 
@@ -291,7 +307,6 @@ async function setup(state) {
          onAfterCompilation: (program) => {
             gl.useProgram(state.program = program);
             state.uColorLoc = gl.getUniformLocation(program, 'uColor');
-
             state.uMaterialLoc = gl.getUniformLocation(program, 'uMaterial');
             state.uCursorLoc = gl.getUniformLocation(program, 'uCursor');
             state.uModelLoc = gl.getUniformLocation(program, 'uModel');
@@ -338,38 +353,17 @@ async function setup(state) {
    gl.enableVertexAttribArray(aUV);
    gl.vertexAttribPointer(aUV, 2, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 9);
 
-
-
-
-
-
    state.calibrationCount = 0;
 
    Input.initKeyEvents();
 
-   // this.audioContext = new SpatialAudioContext();
-
    setupWorld(state);
 
-
-   /************************************************************************
-
-   OBJECT SYNC EXAMPLE
-
-   ************************************************************************/
-
-
-   // MR.objs.push(grabbableCube);
-   // grabbableCube.position    = [0,0,-0.5].slice();
-   // grabbableCube.orientation = [1,0,0,1].slice();
-   // grabbableCube.uid = 0;
-   // grabbableCube.lock = new Lock();
-   // sendSpawnMessage(grabbableCube);
 }
 
 function onStartFrame(t, state) {
 
-
+   
    /*-----------------------------------------------------------------
 
    Whenever the user enters VR Mode, create the left and right
@@ -377,7 +371,6 @@ function onStartFrame(t, state) {
 
    -----------------------------------------------------------------*/
 
-   // let isHandlesUpdated = false;
 
    const input = state.input;
    const editor = state.editor;
@@ -393,12 +386,12 @@ function onStartFrame(t, state) {
       if (!input.LC) input.LC = new ControllerHandler(MR.leftController);
       if (!input.RC) input.RC = new ControllerHandler(MR.rightController);
 
-      // if (!state.calibrate) {
-      //    m.identity();
-      //    m.rotateY(Math.PI / 2);
-      //    m.translate(-2.01, .04, 0);
-      //    state.calibrate = m.value().slice();
-      // }
+      if (!state.calibrate) {
+         m.identity();
+         m.rotateY(Math.PI / 2);
+         m.translate(-2.01, .04, 0);
+         state.calibrate = m.value().slice();
+      }
    }
 
    //Handle Timing
@@ -421,90 +414,20 @@ function onStartFrame(t, state) {
    gl.enable(gl.DEPTH_TEST);
    gl.enable(gl.CULL_FACE);
 
-   // if (input.LC) {
-   //    let LP = input.LC.center();
-   //    let RP = input.RC.center();
-   //    let D  = CG.subtract(LP, RP);
-   //    let d  = metersToInches(CG.norm(D));
-   //    let getX = C => {
-   //       m.save();
-   //          m.identity();
-   //          m.rotateQ(CG.matrixFromQuaternion(C.orientation()));
-   //          m.rotateX(.75);
-   //          let x = (m.value())[1];
-   //       m.restore();
-   //       return x;
-   //    }
-   //    let lx = getX(input.LC);
-   //    let rx = getX(input.RC);
-   //    let sep = metersToInches(TABLE_DEPTH - 2 * RING_RADIUS);
-   //    if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
-   //       if (state.calibrationCount === undefined)
-   //          state.calibrationCount = 0;
-   //       if (++state.calibrationCount == 30) {
-   //          m.save();
-   //             m.identity();
-   //             m.translate(CG.mix(LP, RP, .5));
-   //             m.rotateY(Math.atan2(D[0], D[2]) + Math.PI/2);
-   //             m.translate(-2.35,1.00,-.72);
-   //             state.avatarMatrixForward = CG.matrixInverse(m.value());
-   //             state.avatarMatrixInverse = m.value();
-   //          m.restore();
-   //          state.calibrationCount = 0;
-   //       }
-   //    }
-   // }
-
-
    let patches = state.patches;
    state.intersectionSphere = { vec: new Vector(0, -1, 0), contact: false };
 
 
    handleController(input.RC, state);
-
    handleController(input.LC, state);
 
 
-   if (state.handles) {
-      // console.log("FRAME");
-      for (let i = 0; i < state.handles.length; i++) {
-         state.handles[i].update();
-         state.handles[i].checkBounds(-EYE_HEIGHT);
-      }
-   }
-
-
-   //UPDATE OBJECTS HERE
-   for (let i = 0; i < state.triangles.length; i++) {
-      let tri = state.triangles[i];
-      tri.update();
-   }
-   if (state.triangles.length > MAX_TRIANGLES) {
-      state.triangles.shift();
-   }
-
-   for (let i = 0; i < state.squares.length; i++) {
-      let sq = state.squares[i];
-      sq.update();
-   }
-   if (state.squares.length > MAX_TRIANGLES) {
-      state.squares.shift();
-   }
-
-   for (let i = 0; i < state.lines.length; i++) {
-      let ln = state.lines[i];
-      ln.update();
-   }
-   if (state.lines.length > MAX_TRIANGLES) {
-      state.lines.shift();
-   }
-
-
+   updateHandles(state);
+   
+   updateObjects(state);
 
    updatePatches(state);
 
-   releaseLocks(state);
-   pollGrab(state);
 }
 
 
@@ -515,14 +438,20 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
 
    m.identity();
+   m.save()
    m.rotateX(state.tiltAngle);
    m.rotateY(state.turnAngle);
    let P = state.position;
    m.translate(P[0], P[1], P[2]);
+   
 
    m.save();
    myDraw(t, projMat, viewMat, state, eyeIdx, false);
    m.restore();
+
+   
+   m.restore();
+
 
 }
 
@@ -544,7 +473,6 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
    let prev_mat = 0;
 
    const input = state.input;
-
 
    let drawStrip = (mesh, color, mat = 0) => {
       gl.uniform3fv(state.uColorLoc, color);
@@ -581,46 +509,30 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       prev_mesh = mesh;
    }
 
-
-
-
    m.save();
+
+
+   /**
+    * DRAW HANDLES
+    */
 
    for (let i = 0; i < state.handles.length; i++) {
       m.save();
+      
+      m.multiply(state.avatarMatrixForward);
       let pos = state.handles[i].position;
       m.translate(pos.x, pos.y, pos.z);
       m.scale(.03, .03, .03);
+      drawStrip(CG.sphere, [0.33, .33, 0.0], 2);
 
-      if (selection == i) {
-         drawStrip(CG.sphere, [1, 1, 1]);
-
-      } else {
-         drawStrip(CG.sphere, [0.33, .33, 0.0], 2);
-
-      }
       m.restore();
    }
-
-
-   /**DRAW REFERENCE SPHERE */
-   if (state.intersectionSphere.contact) {
-      m.save();
-      m.translate(state.intersectionSphere.vec.x, state.intersectionSphere.vec.y, state.intersectionSphere.vec.z);
-      m.scale(.01, .01, .01);
-      drawStrip(CG.sphere, [1, 0, 0]);
-      m.restore();
-
-   }
-
-   
-
-
 
    /**
     * DRAW PATCHES
     */
 
+   m.multiply(state.avatarMatrixForward);
    patches.forEach(function (patch) {
       drawLines(patch.mesh, [1, 0, 1]);
    })
@@ -631,82 +543,83 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
 
 
    let drawController = (C, color) => {
-
+      
       let P = C.position(), s = C.isDown() ? .0125 : .0225;
+      m.multiply(state.avatarMatrixForward)
 
       if (C.isButtonDown(2)) {
          //Handle
          m.save();
-         m.translate(P[0], P[1], P[2]);
-         m.rotateQ(C.orientation());
-         m.save();
-         m.translate(0, 0.0, 0.03);
-         m.scale(.01, .01, .05);
-         drawLines(CG.cube, color, 0.1);
-         m.restore();
-         //Hitter
-         m.save();
-         m.translate(0, 0, -0.02);
-         m.scale(.05, .05, .05);
-         m.rotateX(-Math.PI / 2);
-         drawLines(CG.lowResLineSphere, color, 0.1);
-         m.restore();
+            m.translate(P[0], P[1], P[2]);
+            m.rotateQ(C.orientation());
+            m.save();
+               m.translate(0, 0.0, 0.03);
+               m.scale(.01, .01, .05);
+               drawLines(CG.cube, color, 0.1);
+            m.restore();
+            //Hitter
+
+            m.save();
+               m.translate(0, 0, -0.02);
+               m.scale(.05, .05, .05);
+               m.rotateX(-Math.PI / 2);
+               drawLines(CG.lowResLineSphere, color, 0.1);
+            m.restore();
+
          m.restore();
       } else {
          m.save();
-         m.translate(P[0], P[1], P[2]);
-         m.rotateQ(C.orientation());
-         m.save();
-         m.translate(-s, 0, .001);
-         m.scale(.0125, .016, .036);
-         drawLines(CG.cube, color, 0.1);
-         m.restore();
-         m.save();
-         m.translate(s, 0, .001);
-         m.scale(.0125, .016, .036);
-         drawLines(CG.cube, color);
-         m.restore();
-         m.save();
-         m.translate(0, 0, .025);
-         m.scale(.015, .015, .01);
-         drawLines(CG.cube, color);
-         m.restore();
-         m.save();
-         m.translate(0, 0, .035);
-         m.rotateX(.5);
-         m.save();
-         m.translate(0, -.001, .035);
-         m.scale(.014, .014, .042);
-         drawLines(CG.cube, color);
-         m.restore();
-         m.save();
-         m.translate(0, -.001, .077);
-         m.scale(.014, .014, .014);
+            m.translate(P[0], P[1], P[2]);
+            m.rotateQ(C.orientation());
 
-         drawLines(CG.cube, [1, 1, 1,]);
+            m.save();
+            m.translate(-s, 0, .001);
+               m.scale(.0125, .016, .036);
+               drawLines(CG.cube, color, 0.1);
+            m.restore();
+            m.save();
+               m.translate(s, 0, .001);
+               m.scale(.0125, .016, .036);
+               drawLines(CG.cube, color);
+            m.restore();
+            m.save();
+               m.translate(0, 0, .025);
+               m.scale(.015, .015, .01);
+               drawLines(CG.cube, color);
+            m.restore();
+            m.save();
+               m.translate(0, 0, .035);
+               m.rotateX(.5);
+               m.save();
+               m.translate(0, -.001, .035);
+               m.scale(.014, .014, .042);
+               drawLines(CG.cube, color);
+            m.restore();
+            m.save();
+               m.translate(0, -.001, .077);
+               m.scale(.014, .014, .014);
 
-         m.restore();
-         m.restore();
+               drawLines(CG.cube, [1, 1, 1,]);
+
+               m.restore();
+            m.restore();
          m.restore();
       }
 
-      //drawLines(CG.cube, [1, 1, 1,]);
-
    }
-
+   
+   m.save();
    if (input.LC) {
       drawController(input.LC, [1, 0, 0]);
    }
-
+   
+   m.restore();
+   m.save();
    if (input.RC) {
-      if (input.RC.isButtonDown(2)) {
-
-         drawController(input.RC, [1, 1, 1]);
-      } else {
-
-         drawController(input.RC, [0, 1, 1]);
-      }
+      drawController(input.RC, [0, 1, 1]);
    }
+   
+   m.restore();
 
 
    /**
@@ -723,32 +636,32 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
    //SUN
    m.save();
    m.translate(0, 0, -1000);
-   m.scale(100, 100, 1);
+   m.scale(200, 200, 1);
    drawStrip(CG.sphere, [2, 2, 0], MATERIALS.sun);
    m.restore();
 
    //SUN STRIPES
    m.save();
    m.translate(0, 7, -990);
-   m.scale(100, 5, 1);
+   m.scale(200, 5, 1);
    drawStrip(CG.cube, [0, 0, 0])
    m.restore();
 
    m.save();
    m.translate(0, 18, -990);
-   m.scale(100, 3, 1);
+   m.scale(200, 3, 1);
    drawStrip(CG.cube, [0, 0, 0])
    m.restore();
 
    m.save();
    m.translate(0, 27, -990);
-   m.scale(100, 2, 1);
+   m.scale(200, 2, 1);
    drawStrip(CG.cube, [0, 0, 0])
    m.restore();
 
    m.save();
    m.translate(0, 35, -990);
-   m.scale(100, 1, 1);
+   m.scale(200, 1, 1);
    drawStrip(CG.cube, [0, 0, 0])
    m.restore();
 
@@ -827,33 +740,7 @@ function onEndFrame(t, state) {
       if (state.audioContext != null) {
          state.audioContext.updateListener(input.HS.position(), input.HS.orientation());
       }
-
-
-
-
    }
-
-
-
-   // if (input.HS != null) {
-
-   //    // Here is an example of updating each audio context with the most
-   //    // recent headset position - otherwise it will not be spatialized
-
-   //    this.audioContext1.updateListener(input.HS.position(), input.HS.orientation());
-   //    this.audioContext2.updateListener(input.HS.position(), input.HS.orientation());
-
-   //    // Here you initiate the 360 spatial audio playback from a given position,
-   //    // in this case controller position, this can be anything,
-   //    // i.e. a speaker, or an drum in the room.
-   //    // You must provide the path given, when you construct the audio context.
-
-   //    if (input.LC && input.LC.press())
-   //       this.audioContext1.playFileAt('assets/audio/blop.wav', input.LC.position());
-
-   //    if (input.RC && input.RC.press())
-   //       this.audioContext2.playFileAt('assets/audio/peacock.wav', input.RC.position());
-   // }
 
    if (input.LC) input.LC.onEndFrame();
    if (input.RC) input.RC.onEndFrame();
@@ -921,66 +808,6 @@ function calcBoundingBox(verts) {
    return [min, max];
 }
 
-function pollGrab(state) {
-   /*-----------------------------------------------------------------
-
-    This function checks for intersection and if user has ownership over 
-    object then sends a data stream of position and orientation.
-
-    -----------------------------------------------------------------*/
-
-   let input = state.input;
-   if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {
-
-      let controller = input.LC.isDown() ? input.LC : input.RC;
-      for (let i = 0; i < MR.objs.length; i++) {
-         //ALEX: Check if grabbable.
-         let isGrabbed = checkIntersection(controller.position(), MR.objs[i].shape);
-         //requestLock(MR.objs[i].uid);
-         if (isGrabbed == true) {
-            if (MR.objs[i].lock.locked) {
-               MR.objs[i].position = controller.position();
-               const response =
-               {
-                  type: "object",
-                  uid: MR.objs[i].uid,
-                  state: {
-                     position: MR.objs[i].position,
-                     orientation: MR.objs[i].orientation,
-                  },
-                  lockid: MR.playerid,
-
-               };
-
-               MR.syncClient.send(response);
-            } else {
-               MR.objs[i].lock.request(MR.objs[i].uid);
-            }
-         }
-      }
-   }
-}
-
-function releaseLocks(state) {
-
-   /*-----------------------------------------------------------------
-
-    This function releases stale locks. Stale locks are locks that
-    a user has already lost ownership over by letting go
-
-    -----------------------------------------------------------------*/
-
-   let input = state.input;
-   if ((input.LC && !input.LC.isDown()) && (input.RC && !input.RC.isDown())) {
-      for (let i = 0; i < MR.objs.length; i++) {
-         if (MR.objs[i].lock.locked == true) {
-            MR.objs[i].lock.locked = false;
-            MR.objs[i].lock.release(MR.objs[i].uid);
-         }
-      }
-   }
-}
-
 
 
 /********************
@@ -1036,32 +863,31 @@ function map_range(value, low1, high1, low2, high2) {
 function handleNoteHit(point, state) {
 
 
-   console.log("Tone!")
+   //JH: Switch between synth and piano modes:
+   if(SYNTH){
 
-   let toneToPlay = map_range(point.y, -1, 2, 0, state.pianoSounds.length);
-   console.log(point.y);
-   toneToPlay = Math.floor(toneToPlay);
-   console.log(toneToPlay);
-   let note = state.pianoSounds[toneToPlay]
-   console.log(note);
-   state.audioContext.playFileAt(note, [point.x, point.y, point.z])
+   state.audioContext.playToneAt([point.x, point.y, point.z]);
+
+   }else{
+      let toneToPlay = map_range(point.y, -1, 2, 0, state.pianoSounds.length);
+      console.log(point.y);
+      toneToPlay = Math.floor(toneToPlay);
+      console.log(toneToPlay);
+      let note = state.pianoSounds[toneToPlay]
+      console.log(note);
+      state.audioContext.playFileAt(note, [point.x, point.y, point.z])
+   }
 
 
-   //state.audio.generateTone([point.x, point.y, point.z]);
-
-   // //harder hit = more tris
-   // let amt = Vector.mult(motion, 10).magnitude() + 1;
-   // state.intersectionSphere.vec = new Vector(point.x, point.y, point.z);
-   // state.intersectionSphere.contact = true;
-
-   if (Math.random() < 0.5) {
+   //JH NEXT STEP: a harder hit results in more geometry spawned.  
+   if (Math.random() < 0.8) {
       createNewGeometryOnHit(point, CG.line, state.lines);
    }
-   if (Math.random() < 0.5) {
-      createNewGeometryOnHit(point, CG.square, state.squares);
-   }
-   if (Math.random() < 0.5) {
+   if (Math.random() < 0.6) {
       createNewGeometryOnHit(point, CG.triangle, state.triangles);
+   }
+   if (Math.random() < 0.3) {
+      createNewGeometryOnHit(point, CG.square, state.squares);
    }
 
 }
@@ -1090,117 +916,9 @@ function createNewGeometryOnHit(point, type, arr) {
    arr.push(obj);
 }
 
-/********************
-* DRAW CONTROLLERS
-*******************/
-
-function drawControllers(state) {
-   const input = state.input;
-
-   // let drawHeadset = (position, orientation) => {
-   //     //  let P = HS.position();'
-   //     let P = position;
-
-   //     m.save();
-   //         m.multiply(state.avatarMatrixForward);
-   //         m.translate(P[0], P[1], P[2]);
-   //         m.rotateQ(orientation);
-   //         m.scale(.1);
-   //         m.save();
-   //             m.scale(1, 1.5, 1);
-   //             drawStrip(CG.sphere, [0, 0, 0]);
-   //         m.restore();
-   //         for (let s = -1; s <= 1; s += 2) {
-   //             m.save();
-   //                 m.translate(s * .4, .2, -.8);
-   //                 m.scale(.4, .4, .1);
-   //                 drawStrip(CG.sphere, [10, 10, 10]);
-   //             m.restore();
-   //         }
-   //     m.restore();
-   // }
-
-   // let drawAvatar = (avatar, pos, rot, scale, state) => {
-   //    m.save();
-   //    //   m.identity();
-   //       m.translate(pos[0],pos[1],pos[2]);
-   //       m.rotateQ(rot);
-   //       m.scale(scale,scale,scale);
-   //       drawStrip(avatar.headset.vertices, [1,1,1], 0);
-   //    m.restore();
-   // }
-
-
-
-   // let drawSyncController = (pos, rot, color) => {
-   //     let P = pos;
-   //     m.save();
-   //         // m.identity();
-   //         m.translate(P[0], P[1], P[2]);
-   //         m.rotateQ(rot);
-   //         m.translate(0, .02, -.005);
-   //         m.rotateX(.75);
-   //         m.save();
-   //             m.translate(0, 0, -.0095).scale(.004, .004, .003);
-   //         m.restore();
-   //         m.save();
-   //             m.translate(0, 0, -.01).scale(.04, .04, .13);
-   //             drawStrip(CG.sphere, [0, 0, 0]);
-   //         m.restore();
-   //         m.save();
-   //             m.translate(0, -.0135, -.008).scale(.04, .0235, .0015);
-   //             drawStrip(CG.sphere, [0, 0, 0]);
-   //         m.restore();
-   //         m.save();
-   //             m.translate(0, -.01, .03).scale(.012, .02, .037);
-   //             drawStrip(CG.sphere, [0, 0, 0]);
-   //         m.restore();
-   //         m.save();
-   //             m.translate(0, -.01, .067).scale(.012, .02, .023);
-   //             drawStrip(CG.sphere, [0, 0, 0]);
-   //         m.restore();
-   //     m.restore();
-   // }
-
-
-   // for (let id in MR.avatars) {
-
-   //     const avatar = MR.avatars[id];
-
-   //     if (avatar.mode == MR.UserType.vr) {
-   //         if (MR.playerid == avatar.playerid)
-   //             continue;
-
-   //         let headsetPos = avatar.headset.position;
-   //         let headsetRot = avatar.headset.orientation;
-
-   //         if (headsetPos == null || headsetRot == null)
-   //             continue;
-
-   //         if (typeof headsetPos == 'undefined') {
-   //             console.log(id);
-   //             console.log("not defined");
-   //         }
-
-   //         const rcontroller = avatar.rightController;
-   //         const lcontroller = avatar.leftController;
-
-   //         let hpos = headsetPos.slice();
-   //         hpos[1] += EYE_HEIGHT;
-
-   //         drawHeadset(hpos, headsetRot);
-   //         let lpos = lcontroller.position.slice();
-   //         lpos[1] += EYE_HEIGHT;
-   //         let rpos = rcontroller.position.slice();
-   //         rpos[1] += EYE_HEIGHT;
-
-   //         drawSyncController(rpos, rcontroller.orientation, [1, 0, 0]);
-   //         drawSyncController(lpos, lcontroller.orientation, [0, 1, 1]);
-   //     }
-   // }
-}
-
-
+/*************
+* CONTROLLERS
+*************/
 
 
 function handleController(controller, state) {
@@ -1236,7 +954,7 @@ function handleController(controller, state) {
 
       if (controller.isButtonDown(3)) {
 
-         //If button for moving is down, store velocity:
+         //If button for moving is down, add velocity to each handle handle:
          state.handles.forEach(function (handle) {
             handle.setVelocity(motion);
          });
@@ -1246,11 +964,13 @@ function handleController(controller, state) {
 
       let closest = 1000;
       let point = null;
-      //If drum mode
+
+      //If MUSIC MODE
       if (controller.isButtonDown(2)) {
 
          patches.forEach(function (patch) {
 
+            // Check position of controller again collision points of mesh
             patch.mesh.collisionPoints.forEach(function (collisionPoint) {
                let d = Vector.dist(pos, collisionPoint);
                if (d < closest) {
@@ -1272,3 +992,67 @@ function handleController(controller, state) {
       }
    }
 }
+
+
+/**
+ * Archive
+ */
+
+ //TODO
+   // let calibrate = function (input, state) {
+   //    m.save();
+   //    if (input.LC) {
+   //       let LP = input.LC.center();
+   //       let RP = input.RC.center();
+   //       let D = CG.subtract(LP, RP);
+   //       let d = metersToInches(CG.norm(D));
+   //       let getX = C => {
+   //          m.save();
+   //          m.identity();
+   //          m.rotateQ(CG.matrixFromQuaternion(C.orientation()));
+   //          m.rotateX(.75);
+   //          let x = (m.value())[1];
+   //          m.restore();
+   //          return x;
+   //       }
+
+   //       let lx = getX(input.LC);
+   //       let rx = getX(input.RC);
+   //       let sep = metersToInches(2 * RING_RADIUS);
+
+   //       if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
+   //          if (state.calibrationCount === undefined)
+   //             state.calibrationCount = 0;
+   //          if (++state.calibrationCount == 30) {
+
+   //             console.log("Calibrating!")
+   //             for(let i = 0; i < state.handles.length; i++){
+   //                let v = [state.handles[i].position.x, state.handles[i].position.y, state.handles[i].position.z, 1]
+   //                let newV = CG.matrixMultiply(state.avatarMatrixInverse, v);
+   //                state.handles[i].position = new Vector(newV[0], newV[1], newV[2]);
+   //             }
+
+
+   //             m.save();
+   //             m.identity();
+   //             m.translate(CG.mix(LP, RP, .5));
+   //             m.rotateY(Math.atan2(D[0], D[2]) + Math.PI / 2);
+   //             //m.translate(-2.35, 1.00, -.72);
+   //             //m.translate(-.5, .5, .5);
+   //             state.avatarMatrixForward = CG.matrixInverse(m.value());
+   //             state.avatarMatrixInverse = m.value();
+   //             m.restore();
+
+   //             for(let i = 0; i < state.handles.length; i++){
+   //                let v = [state.handles[i].position.x, state.handles[i].position.y, state.handles[i].position.z, 1]
+   //                let newV = CG.matrixMultiply(state.avatarMatrixForward, v);
+   //                state.handles[i].position = new Vector(newV[0], newV[1], newV[2]);
+   //             }
+
+   //             state.calibrationCount = 0;
+   //          }
+   //       }
+   //    }
+
+   //    m.restore();
+   // }

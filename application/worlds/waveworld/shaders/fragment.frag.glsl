@@ -155,8 +155,8 @@ vec3 phongShading(){
 void main() {
 
    light = Light(
-      normalize(vec3(.5,.2, .2)), 
-      vec3(2.,1.,1.) 
+      normalize(vec3(0,.1, -1.)), 
+      vec3(2.,1.,0.) 
    );
 
    // light2 = Light(

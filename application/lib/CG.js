@@ -325,7 +325,7 @@ class BezierPatch {
          M, N,
          CG.cubicPatch,
          BezierPatch.toCubicPatchCoefficients(CG.BezierBasisMatrix, this.handlesToPatchArray()),
-         true
+         true  //make collisions
       );
 
 
@@ -480,6 +480,7 @@ class ParametricGrid {
       let uInc = 1.0;
       let vInc = 1.0;
 
+      //
       for (let row = 0; row <= N; row++) {
 
          for (let col = 0; col <= M; col++) {
@@ -541,67 +542,21 @@ class ParametricGrid {
 }
 
 
-class PhyscisBody {
-   constructor(velocity, angularMomentum) {
-      this.velocity = velocity;
-      this.angularMomentum = angularMomentum;
 
-      //TODO: Apply frictions?
-      this.friction = 0.99;
-      this.angularFriction = 0.9;
-   }
+CG.sphere = new ParametricMesh(32, 16, CG.uvToSphere);
 
-   applyForce(force) {
-      //Expects Vector
-      this.velocity.add(force);
-   }
+CG.lowResSphere = new ParametricMesh(8, 8, CG.uvToSphere);
 
-   addTorque(transform, torque) {
-      //Expects Vector
-      this.angularMomentum.add(torque);
-   }
-}
+CG.linesphere = new ParametricGrid(32, 16, CG.uvToSphere);
 
-class Transform {
-   constructor(pos = new Vector(0, 0, 0), rot = new Vector(0, 0, 0), scale = new Vector(1, 1, 1)) {
-      this.position = pos;
-      this.rotation = rot;
-      this.scale = scale;
-   }
-}
+CG.lowResLineSphere = new ParametricGrid(8, 8, CG.uvToSphere);
 
-//Based off Unity GameObject system 
-class Geometry {
-   constructor(transform, mesh) {
-      this.mesh = mesh;
-      this.transform = transform;
-      this.physicsBody = null;
-      this.age = 0;
-   }
 
-   addPhysicsBody(velocity = new Vector(0, 0, 0), angularMomentum = new Vector(0, 0, 0)) {
-      this.physicsBody = new PhyscisBody(velocity, angularMomentum);
-   }
+CG.cube = CG.createCubeVertices();
+CG.triangle = CG.createTriangleVertices();
+CG.line = CG.createLineVertices();
 
-   applyTransform(m) {
-      let transform = this.transform;
-      m.translate(transform.position.x, transform.position.y, transform.position.z);
-      m.rotateX(transform.rotation.x);
-      m.rotateY(transform.rotation.y);
-      m.rotateZ(transform.rotation.z);
-      m.scale(transform.scale.x, transform.scale.y, transform.scale.z);
-
-   }
-
-   update() {
-      if (this.physicsBody != null) {
-         this.transform.position.add(this.physicsBody.velocity);
-         this.transform.rotation.add(this.physicsBody.angularMomentum);
-      }
-
-      this.age += 1;
-   }
-}
+CG.square = CG.createQuadVertices();
 
 
 /**
@@ -634,20 +589,7 @@ class Geometry {
 
 // CG.cube     = CG.createCubeVertices();
 // CG.quad     = CG.createQuadVertices();
-CG.sphere = new ParametricMesh(32, 16, CG.uvToSphere);
 
-CG.lowResSphere = new ParametricMesh(8, 8, CG.uvToSphere);
-
-CG.linesphere = new ParametricGrid(32, 16, CG.uvToSphere);
-
-CG.lowResLineSphere = new ParametricGrid(8, 8, CG.uvToSphere);
-
-
-CG.cube = CG.createCubeVertices();
-CG.triangle = CG.createTriangleVertices();
-CG.line = CG.createLineVertices();
-
-CG.square = CG.createQuadVertices();
 // CG.cylinder = CG.createMeshVertices(32,  6, CG.uvToCylinder);
 // CG.torus    = CG.createMeshVertices(32, 16, CG.uvToTorus, 0.3);
 // CG.torus1   = CG.createMeshVertices(32, 16, CG.uvToTorus, 0.1);

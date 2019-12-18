@@ -23,7 +23,6 @@ class SpatialAudioContext {
         this.listener = this.context.listener;
 
         files.forEach((f) => {
-            // console.log(f);
             this.loadFile(f);
         });
 
@@ -34,23 +33,11 @@ class SpatialAudioContext {
         this.startedAt = 0;
         this.playing = false;
 
-        this.wave = "sawtooth";
+        this.wave = "sawtooth"; // <<- JH: Change this for different sound waves. sine, square, sawtooth, triangle
 
-        //Useful for waveform generator?
-        this.customWaveform = null;
-        this.sineTerms = null;
-        this.cosineTerms = null;
         this.osc = null;
 
         this.stopTimer = null;
-
-        this.envelope = {
-            attack: 0.02,
-            release: 1
-        }
-
-
-        this.setupOcillator();
 
     };
 
@@ -85,8 +72,6 @@ class SpatialAudioContext {
             return;
         }
 
-       
-        
         const source = this.context.createBufferSource();
         source.buffer = this.cache[url];
 
@@ -103,7 +88,7 @@ class SpatialAudioContext {
         let timer = setTimeout(() => {
             this.stop(source);
             // this.playing = false;
-        }, source.buffer.duration*1000);
+        }, source.buffer.duration * 1000);
 
         this.playing = true;
 
@@ -111,7 +96,6 @@ class SpatialAudioContext {
 
     stop(source) {
         source.stop();
-        // this.cache[url].stop();
         this.playing = false;
     };
 
@@ -170,7 +154,6 @@ class SpatialAudioContext {
     };
 
     initReverb(url) {
-        // this.loadReverbFile(url);
 
         this.reverbNode = this.context.createConvolver();
         this.reverbNode.buffer = this.reverbCache[url];
@@ -184,73 +167,40 @@ class SpatialAudioContext {
         this.reverbNode.buffer = this.reverbCache[url];
     };
 
-    //JH MODS FOR SYNTH:
+    /* MODS FOR SYNTH BELOW */
 
-
-    setupOcillator() {
-
-        this.sineTerms = new Float32Array([0, 0, 1, 0, 1]);
-        this.cosineTerms = new Float32Array(this.sineTerms.length);
-        this.customWaveform = this.context.createPeriodicWave(
-            this.cosineTerms,
-            this.sineTerms
-        );
-
-
-        // this.osc.start();
-    }
-
-    generateTone(position, orientation = [0, 0, 0]) {
+    playToneAt(position, orientation = [0, 0, 0]) {
 
         this.panner.setPosition(position[0], position[1], position[2]);
         this.panner.setOrientation(orientation[0], orientation[1], orientation[2]);
 
-
-        //Proof oc concept - take height from position and map to freq:
+        //Proof of concept - take height from position and map to freq:
         let freq = this.map_range(position[1], -1, 2, 27, 2700)
-
         this.osc = this.playTone(freq);
 
-
-
     }
 
     reset() {
-
-
         this.osc = null;
-
-
     }
 
     playTone(freq) {
-        // osc.connect(this.gainNode);
-        this.isPlaying = true;
+        
+        /**JH: Envelope is in basic terms how the sound enters and exits. 
+         * A low attack means the sound reaches peak volume relatively 
+         * quickly (as if the instrument was struck), and a high
+         * release means the sound lingers around for longer. */
+
+        this.envelope = {
+            attack: 0.1,
+            release: .5
+        }
+
 
         let now = this.context.currentTime;
         let osc = this.context.createOscillator();
-        let envGainNode = this.context.createGain();
 
-        osc.type = this.wave;
-        osc.frequency.value = freq;
-
-
-    }
-
-    reset() {
-
-
-        this.osc = null;
-
-
-    }
-
-    playTone(freq) {
-        // osc.connect(this.gainNode);
-        this.isPlaying = true;
-
-        let now = this.context.currentTime;
-        let osc = this.context.createOscillator();
+        
         let envGainNode = this.context.createGain();
 
         osc.type = this.wave;
@@ -262,25 +212,20 @@ class SpatialAudioContext {
         envGainNode.gain.linearRampToValueAtTime(0, now + this.envelope.attack + this.envelope.release);
         osc
             .connect(this.panner)
-            .connect(this.gainNode) // Spatial
+            .connect(this.gainNode)     // Spatial
             .connect(envGainNode)       //Envelope
             .connect(this.context.destination);
 
         osc.start();
-        
-        // let now = this.context.currentTime;
-        let dur = (this.envelope.attack + this.envelope.release)
 
-        osc.stop(now + dur + 1);
+        let dur = (this.envelope.attack + this.envelope.release)
+        osc.stop(now + dur + 1);    //+1 helps prevent popping at the end of tones
         return osc;
 
+        
+
     }
 
-    selectRandomFreq() {
-        return Math.random() * 200 + 200
-    }
-
-   
 
     map_range(value, low1, high1, low2, high2) {
         return low2 + (high2 - low2) * (value - low1) / (high1 - low1);
