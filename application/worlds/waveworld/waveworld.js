@@ -59,7 +59,7 @@ let setupWorld = function (state) {
    //HERE OFFSET WORLD 
 
    if (!state.worldOffset) {
-      state.worldOffset = new Vector(0, -0.5, 0);
+      state.worldOffset = new Vector(0, 0, 0);
    }
 
    for (let i = 0; i < state.handles.length; i++) {
@@ -362,15 +362,6 @@ async function setup(state) {
 
 function onStartFrame(t, state) {
 
-
-   /*-----------------------------------------------------------------
-
-   Whenever the user enters VR Mode, create the left and right
-   controller handlers.
-
-   -----------------------------------------------------------------*/
-
-
    const input = state.input;
    const editor = state.editor;
 
@@ -380,6 +371,7 @@ function onStartFrame(t, state) {
       MR.avatarMatrixInverse = state.avatarMatrixInverse = CG.matrixIdentity();
    }
 
+   //Create controller & headset handlers each time VR mode is entered
    if (MR.VRIsActive()) {
       if (!input.HS) input.HS = new HeadsetHandler(MR.headset);
       if (!input.LC) input.LC = new ControllerHandler(MR.leftController);
@@ -387,8 +379,8 @@ function onStartFrame(t, state) {
 
       if (!state.calibrate) {
          m.identity();
-         m.rotateY(Math.PI / 2);
-         m.translate(-2.01, .04, 0);
+         // m.rotateY(Math.PI / 2);
+         // m.translate(-2.01, .04, 0);
          state.calibrate = m.value().slice();
       }
    }
@@ -431,29 +423,17 @@ function onStartFrame(t, state) {
 
 }
 
-
-
-
-
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
-
-
    m.identity();
    m.save()
    m.rotateX(state.tiltAngle);
    m.rotateY(state.turnAngle);
    let P = state.position;
    m.translate(P[0], P[1], P[2]);
-
-
    m.save();
    myDraw(t, projMat, viewMat, state, eyeIdx, false);
    m.restore();
-
-
    m.restore();
-
-
 }
 
 function myDraw(t, projMat, viewMat, state, eyeIdx) {
@@ -1025,22 +1005,20 @@ let calibrate = function (input, state) {
          if (++state.calibrationCount == 30) {
 
             
-            //Multiply by inverse to find world value of handles
+            //Multiply by forward to find world value of handles
             console.log("Calibrating!")
             for (let i = 0; i < state.handles.length; i++) {
 
                state.handles[i].position = Vector.matrixMultiply(state.avatarMatrixForward, state.handles[i].position);
 
-               // let v = [state.handles[i].position.x, state.handles[i].position.y, state.handles[i].position.z, 1]
-               // let newV = CG.matrixMultiply(state.avatarMatrixForward, v);
-               // state.handles[i].position = new Vector(newV[0], newV[1], newV[2]);
             }
 
 
             m.save();
             m.identity();
-            m.translate(CG.mix(LP, RP, 1));
+            m.translate(CG.mix(LP, RP, .5));
             m.rotateY(Math.atan2(D[0], D[2]) + Math.PI / 2);
+            m.translate(0,0,0);
             //m.translate(-2.35, 1.00, -.72);
             //m.translate(-.5, .5, .5);
             state.avatarMatrixForward = CG.matrixInverse(m.value());
@@ -1048,14 +1026,9 @@ let calibrate = function (input, state) {
             m.restore();
 
 
-            //Multiply by forward to find new relative value
+            //Multiply by inverse to find new relative value
             for (let i = 0; i < state.handles.length; i++) {
-
                state.handles[i].position = Vector.matrixMultiply(state.avatarMatrixInverse, state.handles[i].position);
-
-               // let v = [state.handles[i].position.x, state.handles[i].position.y, state.handles[i].position.z, 1]
-               // let newV = CG.matrixMultiply(state.avatarMatrixInverse, v);
-               // state.handles[i].position = new Vector(newV[0], newV[1], newV[2]);
             }
 
             state.calibrationCount = 0;
