@@ -424,6 +424,12 @@ class Vector {
    static one() {
       return new Vector(1, 1, 1);
    }
+
+   static matrixMultiply(M, v){
+      let vArr = [v.x, v.y, v.z, 1]
+      let newV = CG.matrixMultiply(M, vArr);
+      return new Vector(newV[0], newV[1], newV[2]);
+   }
 }
 
 

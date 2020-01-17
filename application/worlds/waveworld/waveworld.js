@@ -74,7 +74,7 @@ let setupWorld = function (state) {
 
    if (state.triangles == null) {
       state.triangles = [];
-   
+
    }
 
    if (state.squares == null) {
@@ -158,7 +158,7 @@ let updatePatches = function (state) {
    }
 }
 
-let updateObjects = function(state){
+let updateObjects = function (state) {
    /**
     * UPDATE OBJECTS HERE
     */
@@ -187,8 +187,7 @@ let updateObjects = function(state){
    }
 }
 
-
-let updateHandles = function(state){
+let updateHandles = function (state) {
    if (state.handles) {
       for (let i = 0; i < state.handles.length; i++) {
          state.handles[i].update();
@@ -363,7 +362,7 @@ async function setup(state) {
 
 function onStartFrame(t, state) {
 
-   
+
    /*-----------------------------------------------------------------
 
    Whenever the user enters VR Mode, create the left and right
@@ -423,10 +422,12 @@ function onStartFrame(t, state) {
 
 
    updateHandles(state);
-   
+
    updateObjects(state);
 
    updatePatches(state);
+
+   calibrate(input,state);
 
 }
 
@@ -443,13 +444,13 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
    m.rotateY(state.turnAngle);
    let P = state.position;
    m.translate(P[0], P[1], P[2]);
-   
+
 
    m.save();
    myDraw(t, projMat, viewMat, state, eyeIdx, false);
    m.restore();
 
-   
+
    m.restore();
 
 
@@ -518,7 +519,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
 
    for (let i = 0; i < state.handles.length; i++) {
       m.save();
-      
+
       m.multiply(state.avatarMatrixForward);
       let pos = state.handles[i].position;
       m.translate(pos.x, pos.y, pos.z);
@@ -543,82 +544,82 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
 
 
    let drawController = (C, color) => {
-      
+
       let P = C.position(), s = C.isDown() ? .0125 : .0225;
       m.multiply(state.avatarMatrixForward)
 
       if (C.isButtonDown(2)) {
          //Handle
          m.save();
-            m.translate(P[0], P[1], P[2]);
-            m.rotateQ(C.orientation());
-            m.save();
-               m.translate(0, 0.0, 0.03);
-               m.scale(.01, .01, .05);
-               drawLines(CG.cube, color, 0.1);
-            m.restore();
-            //Hitter
+         m.translate(P[0], P[1], P[2]);
+         m.rotateQ(C.orientation());
+         m.save();
+         m.translate(0, 0.0, 0.03);
+         m.scale(.01, .01, .05);
+         drawLines(CG.cube, color, 0.1);
+         m.restore();
+         //Hitter
 
-            m.save();
-               m.translate(0, 0, -0.02);
-               m.scale(.05, .05, .05);
-               m.rotateX(-Math.PI / 2);
-               drawLines(CG.lowResLineSphere, color, 0.1);
-            m.restore();
+         m.save();
+         m.translate(0, 0, -0.02);
+         m.scale(.05, .05, .05);
+         m.rotateX(-Math.PI / 2);
+         drawLines(CG.lowResLineSphere, color, 0.1);
+         m.restore();
 
          m.restore();
       } else {
          m.save();
-            m.translate(P[0], P[1], P[2]);
-            m.rotateQ(C.orientation());
+         m.translate(P[0], P[1], P[2]);
+         m.rotateQ(C.orientation());
 
-            m.save();
-            m.translate(-s, 0, .001);
-               m.scale(.0125, .016, .036);
-               drawLines(CG.cube, color, 0.1);
-            m.restore();
-            m.save();
-               m.translate(s, 0, .001);
-               m.scale(.0125, .016, .036);
-               drawLines(CG.cube, color);
-            m.restore();
-            m.save();
-               m.translate(0, 0, .025);
-               m.scale(.015, .015, .01);
-               drawLines(CG.cube, color);
-            m.restore();
-            m.save();
-               m.translate(0, 0, .035);
-               m.rotateX(.5);
-               m.save();
-               m.translate(0, -.001, .035);
-               m.scale(.014, .014, .042);
-               drawLines(CG.cube, color);
-            m.restore();
-            m.save();
-               m.translate(0, -.001, .077);
-               m.scale(.014, .014, .014);
+         m.save();
+         m.translate(-s, 0, .001);
+         m.scale(.0125, .016, .036);
+         drawLines(CG.cube, color, 0.1);
+         m.restore();
+         m.save();
+         m.translate(s, 0, .001);
+         m.scale(.0125, .016, .036);
+         drawLines(CG.cube, color);
+         m.restore();
+         m.save();
+         m.translate(0, 0, .025);
+         m.scale(.015, .015, .01);
+         drawLines(CG.cube, color);
+         m.restore();
+         m.save();
+         m.translate(0, 0, .035);
+         m.rotateX(.5);
+         m.save();
+         m.translate(0, -.001, .035);
+         m.scale(.014, .014, .042);
+         drawLines(CG.cube, color);
+         m.restore();
+         m.save();
+         m.translate(0, -.001, .077);
+         m.scale(.014, .014, .014);
 
-               drawLines(CG.cube, [1, 1, 1,]);
+         drawLines(CG.cube, [1, 1, 1,]);
 
-               m.restore();
-            m.restore();
+         m.restore();
+         m.restore();
          m.restore();
       }
 
    }
-   
+
    m.save();
    if (input.LC) {
       drawController(input.LC, [1, 0, 0]);
    }
-   
+
    m.restore();
    m.save();
    if (input.RC) {
       drawController(input.RC, [0, 1, 1]);
    }
-   
+
    m.restore();
 
 
@@ -864,11 +865,11 @@ function handleNoteHit(point, state) {
 
 
    //JH: Switch between synth and piano modes:
-   if(SYNTH){
+   if (SYNTH) {
 
-   state.audioContext.playToneAt([point.x, point.y, point.z]);
+      state.audioContext.playToneAt([point.x, point.y, point.z]);
 
-   }else{
+   } else {
       let toneToPlay = map_range(point.y, -1, 2, 0, state.pianoSounds.length);
       console.log(point.y);
       toneToPlay = Math.floor(toneToPlay);
@@ -983,7 +984,9 @@ function handleController(controller, state) {
          if (closest < COLLISIONTHRESHOLD) {
             controller.hitHandler.updateHitState(true);
             if (controller.hitHandler.isNewHit()) {
-               handleNoteHit(point, state);
+
+               let emitPoint = Vector.matrixMultiply(state.avatarMatrixForward, pos);
+               handleNoteHit(emitPoint, state); // Changed to controller position rather than collision point because collision point returned untransformed mesh point.
             }
          } else {
             //Flag exit hit:
@@ -994,65 +997,84 @@ function handleController(controller, state) {
 }
 
 
+let calibrate = function (input, state) {
+   
+   m.save();
+   if (input.LC) {
+      let LP = input.LC.center();
+      let RP = input.RC.center();
+      let D = CG.subtract(LP, RP);
+      let d = metersToInches(CG.norm(D));
+      let getX = C => {
+         m.save();
+         m.identity();
+         m.rotateQ(CG.matrixFromQuaternion(C.orientation()));
+         m.rotateX(.75);
+         let x = (m.value())[1];
+         m.restore();
+         return x;
+      }
+
+      let lx = getX(input.LC);
+      let rx = getX(input.RC);
+      let sep = metersToInches(2 * RING_RADIUS);
+
+      if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
+         if (state.calibrationCount === undefined)
+            state.calibrationCount = 0;
+         if (++state.calibrationCount == 30) {
+
+            
+            //Multiply by inverse to find world value of handles
+            console.log("Calibrating!")
+            for (let i = 0; i < state.handles.length; i++) {
+
+               state.handles[i].position = Vector.matrixMultiply(state.avatarMatrixForward, state.handles[i].position);
+
+               // let v = [state.handles[i].position.x, state.handles[i].position.y, state.handles[i].position.z, 1]
+               // let newV = CG.matrixMultiply(state.avatarMatrixForward, v);
+               // state.handles[i].position = new Vector(newV[0], newV[1], newV[2]);
+            }
+
+
+            m.save();
+            m.identity();
+            m.translate(CG.mix(LP, RP, 1));
+            m.rotateY(Math.atan2(D[0], D[2]) + Math.PI / 2);
+            //m.translate(-2.35, 1.00, -.72);
+            //m.translate(-.5, .5, .5);
+            state.avatarMatrixForward = CG.matrixInverse(m.value());
+            state.avatarMatrixInverse = m.value();
+            m.restore();
+
+
+            //Multiply by forward to find new relative value
+            for (let i = 0; i < state.handles.length; i++) {
+
+               state.handles[i].position = Vector.matrixMultiply(state.avatarMatrixInverse, state.handles[i].position);
+
+               // let v = [state.handles[i].position.x, state.handles[i].position.y, state.handles[i].position.z, 1]
+               // let newV = CG.matrixMultiply(state.avatarMatrixInverse, v);
+               // state.handles[i].position = new Vector(newV[0], newV[1], newV[2]);
+            }
+
+            state.calibrationCount = 0;
+         }
+      }
+   }
+
+   m.restore();
+}
+
+
+
+
+/*************
+ * CALIBRATION
+ ************/
+
 /**
  * Archive
  */
 
  //TODO
-   // let calibrate = function (input, state) {
-   //    m.save();
-   //    if (input.LC) {
-   //       let LP = input.LC.center();
-   //       let RP = input.RC.center();
-   //       let D = CG.subtract(LP, RP);
-   //       let d = metersToInches(CG.norm(D));
-   //       let getX = C => {
-   //          m.save();
-   //          m.identity();
-   //          m.rotateQ(CG.matrixFromQuaternion(C.orientation()));
-   //          m.rotateX(.75);
-   //          let x = (m.value())[1];
-   //          m.restore();
-   //          return x;
-   //       }
-
-   //       let lx = getX(input.LC);
-   //       let rx = getX(input.RC);
-   //       let sep = metersToInches(2 * RING_RADIUS);
-
-   //       if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
-   //          if (state.calibrationCount === undefined)
-   //             state.calibrationCount = 0;
-   //          if (++state.calibrationCount == 30) {
-
-   //             console.log("Calibrating!")
-   //             for(let i = 0; i < state.handles.length; i++){
-   //                let v = [state.handles[i].position.x, state.handles[i].position.y, state.handles[i].position.z, 1]
-   //                let newV = CG.matrixMultiply(state.avatarMatrixInverse, v);
-   //                state.handles[i].position = new Vector(newV[0], newV[1], newV[2]);
-   //             }
-
-
-   //             m.save();
-   //             m.identity();
-   //             m.translate(CG.mix(LP, RP, .5));
-   //             m.rotateY(Math.atan2(D[0], D[2]) + Math.PI / 2);
-   //             //m.translate(-2.35, 1.00, -.72);
-   //             //m.translate(-.5, .5, .5);
-   //             state.avatarMatrixForward = CG.matrixInverse(m.value());
-   //             state.avatarMatrixInverse = m.value();
-   //             m.restore();
-
-   //             for(let i = 0; i < state.handles.length; i++){
-   //                let v = [state.handles[i].position.x, state.handles[i].position.y, state.handles[i].position.z, 1]
-   //                let newV = CG.matrixMultiply(state.avatarMatrixForward, v);
-   //                state.handles[i].position = new Vector(newV[0], newV[1], newV[2]);
-   //             }
-
-   //             state.calibrationCount = 0;
-   //          }
-   //       }
-   //    }
-
-   //    m.restore();
-   // }
