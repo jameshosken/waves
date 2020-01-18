@@ -381,6 +381,8 @@ try {
           
                 const key = json["uid"];
                 const lockid = json["lockid"];
+                console.log(key)
+                console.log(lockid);
 
                 // if successful, broadcast success to everyone
                 if (datastore.acquire(key, lockid)) {

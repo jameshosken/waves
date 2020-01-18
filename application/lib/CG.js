@@ -365,10 +365,11 @@ class BezierPatch {
 }
 
 class Vector {
-   constructor(x, y, z) {
-      this.x = x;
-      this.y = y;
-      this.z = z;
+   constructor(_x, _y, _z) {
+      //console.log("New Vector: " + _x + ", " + _y + ", " + _z)
+      this.x = _x;
+      this.y = _y;
+      this.z = _z;
    }
 
    toArray() {

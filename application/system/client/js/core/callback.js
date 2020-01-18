@@ -192,15 +192,27 @@ MR.syncClient.eventBus.subscribe("spawn", (json) => {
 MR.syncClient.eventBus.subscribe("object", (json) => {
     const success = json["success"];
      if (success) {
-      console.log("object moved: ", json);
-      // update update metadata for next frame's rendering
-      let current = MR.objs[json["uid"]];
-      console.log(json);
-      current.position = [json["state"]["position"][0], json["state"]["position"][1], json["state"]["position"][2]];
+         console.log("VELOCITY CHANGED")
+
+        //  MR.objs.forEach(velocityDatum => {
+      
+        //     state.handles[velocityDatum.handleIndex].setVelocity(velocityDatum.vec)
+        //     velocityDatum.vec = Vector.mult(velocityDatum.vec, 0.99)
+        //  });
+        console.log(json);
+
+         let current = MR.objs[json["uid"]];
+            current.velocity = [json["state"]["velocity"].x, json["state"]["velocity"].x, json["state"]["velocity"].z];
+
+    //   console.log("object moved: ", json);
+    //   // update update metadata for next frame's rendering
+    //   let current = MR.objs[json["uid"]];
+    //   console.log(json);
+    //   current.position = [json["state"]["position"][0], json["state"]["position"][1], json["state"]["position"][2]];
     //current.orientation = MR.objs[json["state"]["orientation"]];
     }
     else{
-      console.log("failed object message", json);
+      //console.log("failed object message", json);
     }
 });
 

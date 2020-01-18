@@ -26,15 +26,7 @@ function handleCursor(state) {
       fz = .01 * Math.cos(state.turnAngle);
 
    let rx = -.01 * Math.sin(state.turnAngle + Math.PI / 2),
-      rz = -.01 * Math.sin(state.turnAngle + Math.PI / 2);
-   if (Input.keyIsDown(Input.KEY_UP)) {
-      state.position[0] += fx;
-      state.position[2] += fz;
-   }
-   if (Input.keyIsDown(Input.KEY_DOWN)) {
-      state.position[0] -= fx;
-      state.position[2] -= fz;
-   }
+      rz = -.01 * Math.cos(state.turnAngle - Math.PI / 2);
 
    if (Input.keyIsDown(Input.KEY_W)) {
       state.position[0] += fx * 5;
@@ -54,3 +46,5 @@ function handleCursor(state) {
       state.position[2] -= rz * 5;
    }
 }
+
+

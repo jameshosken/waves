@@ -105,6 +105,7 @@ class DataStore {
     
     // attempt to acquire lock, returns true or false
     acquire(key, lockid) {
+        console.log(this.state);
         return this.state['objects'][key]['lockid'] === -1 || this.state['objects'][key]['lockid'] === lockid;
     }
 

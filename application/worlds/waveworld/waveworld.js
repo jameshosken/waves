@@ -42,16 +42,44 @@ const SYNTH = false;
 let noise = new ImprovedNoise();
 let m = new Matrix();
 
+function sendSpawnMessage(object) {
+   const response =
+   {
+      type: "spawn",
+      uid: object.uid,
+      state: object.state,
+      //lockid: MR.playerid,
+      lockid: -1,
+   };
+
+   MR.syncClient.send(response);
+}
+
 let setupWorld = function (state) {
 
    let scl = .5
+   let c = 0;
    if (state.handles == undefined) {
       state.handles = [];
+      //MR.objs = [];
       for (let x = 0; x < GRIDSIZE * 3 + 1; x++) {
          for (let y = 0; y < GRIDSIZE * 3 + 1; y++) {
             let cX = (x - (GRIDSIZE * 3) / 2) * scl;
             let cY = (y - (GRIDSIZE * 3) / 2) * scl;
-            state.handles.push(new Handle(cX, 0, cY))
+            state.handles.push(new Handle(cX, 0, cY));
+            // SETUP NETWORKED VELOCITY DATA
+            let data ={ uid: c,
+                        state:{
+                           vec: Vector.zero(),
+                           handleIndex: c
+                        },
+                        lock: new Lock()
+                     }
+                        
+            MR.objs.push(data);
+            sendSpawnMessage(data);
+            c++;
+            console.log(">>>>>>>>>>>>>>")
          }
       }
    }
@@ -109,19 +137,19 @@ let setupWorld = function (state) {
          let Gb = path + "Gb" + i + loudTail;
          let G = path + "G" + i + loudTail;
 
-
+         //Pentatonic with 4th:
          state.pianoSounds.push(C);
-         state.pianoSounds.push(Db);
+         //state.pianoSounds.push(Db);
          state.pianoSounds.push(D);
-         state.pianoSounds.push(Eb);
+         //state.pianoSounds.push(Eb);
          state.pianoSounds.push(E);
          state.pianoSounds.push(F);
-         state.pianoSounds.push(Gb);
+         //state.pianoSounds.push(Gb);
          state.pianoSounds.push(G);
-         state.pianoSounds.push(Ab);
+         //state.pianoSounds.push(Ab);
          state.pianoSounds.push(A);
-         state.pianoSounds.push(Bb);
-         state.pianoSounds.push(B);
+         //state.pianoSounds.push(Bb);
+         //state.pianoSounds.push(B);
 
 
       }
@@ -190,7 +218,7 @@ let updateObjects = function (state) {
 let updateHandles = function (state) {
    if (state.handles) {
       for (let i = 0; i < state.handles.length; i++) {
-         state.handles[i].update();
+         state.handles[i].update(state);
          state.handles[i].checkBounds(-EYE_HEIGHT);
       }
    }
@@ -370,7 +398,7 @@ function onStartFrame(t, state) {
       MR.avatarMatrixForward = state.avatarMatrixForward = CG.matrixIdentity();
       MR.avatarMatrixInverse = state.avatarMatrixInverse = CG.matrixIdentity();
    }
-
+   
    //Create controller & headset handlers each time VR mode is entered
    if (MR.VRIsActive()) {
       if (!input.HS) input.HS = new HeadsetHandler(MR.headset);
@@ -420,6 +448,11 @@ function onStartFrame(t, state) {
    updatePatches(state);
 
    calibrate(input,state);
+
+   releaseLocks(state)
+
+   pollGrab(input.RC, state);
+   pollGrab(input.LC, state);
 
 }
 
@@ -789,8 +822,6 @@ function calcBoundingBox(verts) {
    return [min, max];
 }
 
-
-
 /********************
  * 
  * CONTROLS
@@ -875,24 +906,24 @@ function handleNoteHit(point, state) {
 
 
 function createNewGeometryOnHit(point, type, arr) {
-   let v = new Vector(
+   let velocity = new Vector(
       (Math.random() * 2 - 1) * 0.01,
       (Math.random() * 2 - 1) * 0.01,
       (Math.random() * 2 - 1) * 0.01
    );
-   let a = new Vector(
+   let angularVeclocity = new Vector(
       (Math.random() * 2 - 1) * 0.01,
       (Math.random() * 2 - 1) * 0.01,
       (Math.random() * 2 - 1) * 0.01
    );
-   let r = new Vector(
+   let rotation = new Vector(
       (Math.random() * 2 - 1),
       (Math.random() * 2 - 1),
       (Math.random() * 2 - 1)
    );
-   let t = new Transform(new Vector(point.x, point.y, point.z), r, new Vector(0.1, 0.1, 0.1));
+   let t = new Transform(new Vector(point.x, point.y, point.z), rotation, new Vector(0.1, 0.1, 0.1));
    let obj = new Geometry(t, type);
-   obj.addPhysicsBody(v, a);
+   obj.addPhysicsBody(velocity, angularVeclocity);
 
    arr.push(obj);
 }
@@ -901,10 +932,14 @@ function createNewGeometryOnHit(point, type, arr) {
 * CONTROLLERS
 *************/
 
+function handleMultiplayerController(state){
+
+}
+
 
 function handleController(controller, state) {
    if (controller) {
-
+      controller.newVelocities = []; //EMpty array to populate with velocities (to send to other clients)
       let tip = controller.tip();
       let pos = new Vector(tip[0], tip[1], tip[2]);
       let patches = state.patches;
@@ -922,14 +957,16 @@ function handleController(controller, state) {
 
       let handleSelection = getHandleIntersected(pos, state);
 
-      let motion = Vector.sub(pos, controller.prevPos);
+      let motion = Vector.sub(pos, controller.prevPos); // Find framerate-independent velocity
 
       if (handleSelection >= 0) {
 
          selection = handleSelection;
 
          if (controller.isDown()) {
-            state.handles[handleSelection].setVelocity(motion);
+            //TODO: Broadcast to other clients here
+            controller.newVelocities.push({idx: handleSelection, vec: motion})
+            //state.handles[handleSelection].setVelocity(motion);
          }
       }
 
@@ -937,7 +974,9 @@ function handleController(controller, state) {
 
          //If button for moving is down, add velocity to each handle handle:
          state.handles.forEach(function (handle) {
-            handle.setVelocity(motion);
+            //TODO: Broadcast to other clients here
+            controller.newVelocities.push({idx: -1, vec: motion});   //-1 = flag for all handles
+            //handle.setVelocity(motion);
          });
       }
 
@@ -965,7 +1004,7 @@ function handleController(controller, state) {
             controller.hitHandler.updateHitState(true);
             if (controller.hitHandler.isNewHit()) {
 
-               let emitPoint = Vector.matrixMultiply(state.avatarMatrixForward, pos);
+               let emitPoint = Vector.matrixMultiply(state.avatarMatrixForward, point);
                handleNoteHit(emitPoint, state); // Changed to controller position rather than collision point because collision point returned untransformed mesh point.
             }
          } else {
@@ -1037,6 +1076,92 @@ let calibrate = function (input, state) {
    }
 
    m.restore();
+}
+
+
+function pollGrab(controller, state) {
+
+
+
+   //check if updating velocity;
+   
+   //if updating velocity,
+      //check if locked. If locked
+         //update MR velocities
+      //else
+         //request lock
+
+   //Update all velocities! // TODO break this out to separate function; do after request locks
+   MR.objs.forEach(velocityDatum => {
+      //console.log(velocityDatum)
+      state.handles[velocityDatum.state.handleIndex].setVelocity(velocityDatum.state.vec)
+      velocityDatum.vec = Vector.mult(velocityDatum.state.vec, 0.99)
+   });
+   //console.log(state.handles);
+
+   //console.log(controller.newVelocities);
+
+   if(!controller){
+      return;
+   }
+      
+   let queryLock = (i, vec) => {
+      console.log("Querying Lock")
+      if (MR.objs[i].lock.locked) {
+         console.log("Lock Held")
+         MR.objs[i].handleIndex = i;
+         MR.objs[i].velocity = vec;
+
+         const response =
+         {
+            type: "object",
+            uid: MR.objs[i].uid,
+            state: {
+               handleIndex:  MR.objs[i].handleIndex,
+               velocity: MR.objs[i].velocity
+            },
+            lockid: MR.playerid,
+         };
+         console.log(response);
+         MR.syncClient.send(response);
+      } else {
+         console.log("No Lock. Requesting Lock")
+         console.log("UID: " + MR.objs[i].uid)
+         //MR.objs[i].lock.release(MR.objs[i].uid);
+         MR.objs[i].lock.request(MR.objs[i].uid);
+      }
+   }
+
+   controller.newVelocities.forEach(newVelocity => {
+      if(newVelocity.idx == -1){
+         // If all handles are moving, simply loop through all and send same velocity vector,
+         for(let i = 0; i <MR.objs.length; i++){
+            queryLock(i, newVelocity.vec);
+         }
+      }
+      else{
+         //If certain handles are moving, update each one individually (using the handle index obtained in handleController() )
+         for(let i = 0; i < controller.newVelocities.length; i++){
+            queryLock(controller.newVelocities[i].idx, controller.newVelocities[i].vec);
+         }
+      }
+   });
+
+   
+
+}
+
+
+function releaseLocks(state) {
+   let input = state.input;
+   if ((input.LC && !input.LC.isDown()) && (input.RC && !input.RC.isDown())) {
+      for (let i = 0; i < MR.objs.length; i++) {
+         if (MR.objs[i].lock.locked == true) {
+            MR.objs[i].lock.locked = false;
+            MR.objs[i].lock.release(MR.objs[i].uid);
+         }
+      }
+   }
 }
 
 
