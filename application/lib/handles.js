@@ -2,7 +2,6 @@
 class Handle {
 
    constructor(x, y, z) {
-      console.log('NEW HANDLE')
       this.position = new Vector(x, y, z);
       this.velocity = new Vector(0, 0, 0);
    }
@@ -13,7 +12,7 @@ class Handle {
       }
       this.position = Vector.add(this.position, this.velocity);
       //this.position = Vector.add(this.position, Vector.mult(this.velocity, state.deltaTime));  //*deltaTime to compensate for varying framerate
-      //this.velocity = Vector.mult(this.velocity, 0.95); //We'll just have to deal with this for now. 
+      this.velocity = Vector.mult(this.velocity, 0.95); //We'll just have to deal with this for now. 
    }
 
    checkBounds(floor){

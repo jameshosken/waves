@@ -68,21 +68,41 @@ let setupWorld = function (state) {
             let cY = (y - (GRIDSIZE * 3) / 2) * scl;
             state.handles.push(new Handle(cX, 0, cY));
             // SETUP NETWORKED VELOCITY DATA
-            let data ={ uid: c,
-                        state:{
-                           vec: Vector.zero(),
-                           handleIndex: c
-                        },
-                        lock: new Lock()
-                     }
-                        
+            let data = {
+               uid: c,
+               state: {
+                  velocity: Vector.zero().toArray(),
+                  handleIndex: c,
+                  update: false
+               },
+               lock: new Lock()
+            }
+
             MR.objs.push(data);
             sendSpawnMessage(data);
             c++;
             console.log(">>>>>>>>>>>>>>")
          }
       }
+
+      // Add flag for 'all' handles
+      let data = {
+         uid: c,
+         state: {
+            velocity: Vector.zero().toArray(),
+            handleIndex: -1,
+            update: false
+         },
+         lock: new Lock()
+      }
+      // c++;
+
+      MR.objs.push(data);
+      sendSpawnMessage(data);
    }
+
+   console.log("MR OBJS:");
+   console.log(MR.objs);
 
    //HERE OFFSET WORLD 
 
@@ -398,7 +418,7 @@ function onStartFrame(t, state) {
       MR.avatarMatrixForward = state.avatarMatrixForward = CG.matrixIdentity();
       MR.avatarMatrixInverse = state.avatarMatrixInverse = CG.matrixIdentity();
    }
-   
+
    //Create controller & headset handlers each time VR mode is entered
    if (MR.VRIsActive()) {
       if (!input.HS) input.HS = new HeadsetHandler(MR.headset);
@@ -447,7 +467,7 @@ function onStartFrame(t, state) {
 
    updatePatches(state);
 
-   calibrate(input,state);
+   calibrate(input, state);
 
    releaseLocks(state)
 
@@ -932,7 +952,7 @@ function createNewGeometryOnHit(point, type, arr) {
 * CONTROLLERS
 *************/
 
-function handleMultiplayerController(state){
+function handleMultiplayerController(state) {
 
 }
 
@@ -964,18 +984,19 @@ function handleController(controller, state) {
          selection = handleSelection;
 
          if (controller.isDown()) {
+            //MOVE SINGLE HANDLE
             //TODO: Broadcast to other clients here
-            controller.newVelocities.push({idx: handleSelection, vec: motion})
+            controller.newVelocities.push({ idx: handleSelection, vec: motion })
             //state.handles[handleSelection].setVelocity(motion);
          }
       }
 
       if (controller.isButtonDown(3)) {
-
+         // MOVE ALL HANDLES SIMULTANEOUSLY
          //If button for moving is down, add velocity to each handle handle:
          state.handles.forEach(function (handle) {
             //TODO: Broadcast to other clients here
-            controller.newVelocities.push({idx: -1, vec: motion});   //-1 = flag for all handles
+            controller.newVelocities.push({ idx: -1, vec: motion });   //-1 = flag for all handles
             //handle.setVelocity(motion);
          });
       }
@@ -1017,7 +1038,7 @@ function handleController(controller, state) {
 
 
 let calibrate = function (input, state) {
-   
+
    m.save();
    if (input.LC) {
       let LP = input.LC.center();
@@ -1043,7 +1064,7 @@ let calibrate = function (input, state) {
             state.calibrationCount = 0;
          if (++state.calibrationCount == 30) {
 
-            
+
             //Multiply by forward to find world value of handles
             console.log("Calibrating!")
             for (let i = 0; i < state.handles.length; i++) {
@@ -1057,7 +1078,7 @@ let calibrate = function (input, state) {
             m.identity();
             m.translate(CG.mix(LP, RP, .5));
             m.rotateY(Math.atan2(D[0], D[2]) + Math.PI / 2);
-            m.translate(0,0,0);
+            m.translate(0, 0, 0);
             //m.translate(-2.35, 1.00, -.72);
             //m.translate(-.5, .5, .5);
             state.avatarMatrixForward = CG.matrixInverse(m.value());
@@ -1084,77 +1105,108 @@ function pollGrab(controller, state) {
 
 
    //check if updating velocity;
-   
+
    //if updating velocity,
-      //check if locked. If locked
-         //update MR velocities
-      //else
-         //request lock
+   //check if locked. If locked
+   //update MR velocities
+   //else
+   //request lock
 
-   //Update all velocities! // TODO break this out to separate function; do after request locks
-   MR.objs.forEach(velocityDatum => {
-      //console.log(velocityDatum)
-      state.handles[velocityDatum.state.handleIndex].setVelocity(velocityDatum.state.vec)
-      velocityDatum.vec = Vector.mult(velocityDatum.state.vec, 0.99)
-   });
-   //console.log(state.handles);
-
-   //console.log(controller.newVelocities);
-
-   if(!controller){
-      return;
-   }
-      
    let queryLock = (i, vec) => {
       console.log("Querying Lock")
       if (MR.objs[i].lock.locked) {
          console.log("Lock Held")
-         MR.objs[i].handleIndex = i;
-         MR.objs[i].velocity = vec;
+
+         //Update MR obj with velocity from controller
+         MR.objs[i].state.velocity = vec.toArray();
 
          const response =
          {
             type: "object",
             uid: MR.objs[i].uid,
             state: {
-               handleIndex:  MR.objs[i].handleIndex,
-               velocity: MR.objs[i].velocity
+               handleIndex: MR.objs[i].state.handleIndex,
+               velocity: MR.objs[i].state.velocity,
+               update: true
             },
             lockid: MR.playerid,
          };
          console.log(response);
          MR.syncClient.send(response);
+
       } else {
          console.log("No Lock. Requesting Lock")
-         console.log("UID: " + MR.objs[i].uid)
-         //MR.objs[i].lock.release(MR.objs[i].uid);
+         console.log("UID: " + MR.objs[i].uid);
          MR.objs[i].lock.request(MR.objs[i].uid);
       }
    }
 
-   controller.newVelocities.forEach(newVelocity => {
-      if(newVelocity.idx == -1){
-         // If all handles are moving, simply loop through all and send same velocity vector,
-         for(let i = 0; i <MR.objs.length; i++){
-            queryLock(i, newVelocity.vec);
+   if (controller) {
+      controller.newVelocities.forEach(newVelocity => {
+         if (newVelocity.idx == -1) {
+            // If all handles are moving, send flag for all handles:
+            queryLock(16, newVelocity.vec);
+         }
+         else {
+            //If certain handles are moving, update each one individually (using the handle index obtained in handleController() )
+            for (let i = 0; i < controller.newVelocities.length; i++) {
+               queryLock(controller.newVelocities[i].idx, newVelocity.vec);
+            }
+         }
+      });
+   }
+
+
+   /*
+   UPDATE VELOCITIES
+   Update all velocities! // TODO break this out to separate function; do after request locks
+   */
+   
+   MR.objs.forEach(velocityDatum => {
+      //Check if update requested:
+      if (velocityDatum.state.update == true) {
+         console.log("UPDATE REQUESTED")
+
+         //set update request back to false:
+         velocityDatum.state.update = false;
+
+       let vec = new Vector(
+         velocityDatum.state.velocity[0],
+         velocityDatum.state.velocity[1],
+         velocityDatum.state.velocity[2])
+
+         if (velocityDatum.state.handleIndex == -1) {
+            
+            //Move all handles simultaneously
+            state.handles.forEach(function (handle) {
+               handle.setVelocity(vec);
+            })
+         } else {
+            state.handles[velocityDatum.state.handleIndex].setVelocity(vec)
+            // For now apply friction locally, within handles.js
          }
       }
-      else{
-         //If certain handles are moving, update each one individually (using the handle index obtained in handleController() )
-         for(let i = 0; i < controller.newVelocities.length; i++){
-            queryLock(controller.newVelocities[i].idx, controller.newVelocities[i].vec);
-         }
-      }
+
+
    });
 
-   
+
 
 }
 
+function isControllerDown(controller) {
+   if (controller) {
+      if (controller.isDown()) return true;
+      if (controller.isButtonDown(3)) return true;
+   }
+   return false;
+}
 
 function releaseLocks(state) {
    let input = state.input;
-   if ((input.LC && !input.LC.isDown()) && (input.RC && !input.RC.isDown())) {
+
+   if (!isControllerDown(input.LC) && !isControllerDown(input.RC)) {
+      //console.log("RELEASING")
       for (let i = 0; i < MR.objs.length; i++) {
          if (MR.objs[i].lock.locked == true) {
             MR.objs[i].lock.locked = false;
