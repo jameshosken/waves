@@ -2,6 +2,7 @@
 GENERAL TODO:
 - Broadcast note hits over network
 - Revise handle motion to use controller acceleration rather than velocity
+- Figure out system to sync handle positions. Perhaps lerp to average point? 
 */
 
 
@@ -103,10 +104,52 @@ let setupWorld = function (state) {
          },
          lock: new Lock()
       }
-      // c++;
+      c++;
 
       MR.objs.push(data);
       sendSpawnMessage(data);
+   }
+
+   //Setup an interval to sync handle positions every second
+   let data = {
+      type: "spawn",
+      uid: 17,  //Next index in sequence for sync timer  TODO: find better way of doing this
+      state: {
+         positions: [],
+         update: false
+      }
+   }
+
+   MR.objs.push(data);
+   sendSpawnMessage(data);
+
+   let broadcastPosition = () => {
+
+      let posArr = [];
+      state.handles.forEach(handle => {
+         posArr.push(handle.position.toArray());
+      })
+
+      const response =
+      {
+         type: "object",
+         uid: 17,
+         state: {
+            positions: posArr,
+            update: true
+         },
+         lockid: MR.playerid
+      };
+      console.log("Sending handle sync data:")
+      console.log(response);
+      MR.syncClient.send(response);
+   }
+
+   if (state.handleSyncTimer) {
+      window.clearInterval(state.handleSyncTimer)
+      state.handleSyncTimer = setInterval(broadcastPosition, 250);
+   } else {
+      state.handleSyncTimer = setInterval(broadcastPosition, 250);
    }
 
    console.log("MR OBJS:");
@@ -245,6 +288,19 @@ let updateObjects = function (state) {
 
 let updateHandles = function (state) {
    if (state.handles) {
+      for (let i = 0; i < state.handles.length; i++) {
+         state.handles[i].update(state);
+         state.handles[i].checkBounds(-EYE_HEIGHT);
+      }
+   }
+}
+
+let syncHandles = function (state) {
+   if (state.handles) {
+
+      if (MR.objs[25]) {
+
+      }
       for (let i = 0; i < state.handles.length; i++) {
          state.handles[i].update(state);
          state.handles[i].checkBounds(-EYE_HEIGHT);
@@ -1158,7 +1214,7 @@ function pollGrab(controller, state) {
             // If all handles are moving, send flag for all handles:
 
             //Set all local velocities
-            state.handles.forEach(handle =>{
+            state.handles.forEach(handle => {
                handle.setVelocity(newVelocity.vec);
             })
             //Broadcast instruction to update all velocities:
@@ -1183,35 +1239,55 @@ function pollGrab(controller, state) {
    */
 
    MR.objs.forEach(velocityDatum => {
+      if (velocityDatum.uid == 17) {
+
+         //Is position data
+         let positionData = velocityDatum;   // Semiantics
+
+         if (positionData.state.update == true ) {
+            console.log("Updating positions")
+            //set update request back to false:
+            positionData.state.update = false;
+
+            let positions = positionData.state.positions;
+
+            for (let i = 0; i < positions.length; i++) {
+               let handle = state.handles[i];
+               let position = new Vector(positions[i][0], positions[i][1], positions[i][2]);
+               handle.pushAveragePositionBuffer(position);
+            }
+         }
+
+         return
+      }
       //Check if update requested:
       if (velocityDatum.state.update == true) {
          console.log("UPDATE REQUESTED")
-         console.log("FROM:" +  velocityDatum.lockid + " (I AM " + MR.playerid + ")")
-         
+         console.log("FROM:" + velocityDatum.lockid + " (I AM " + MR.playerid + ")")
 
          //set update request back to false:
          velocityDatum.state.update = false;
 
          //Do not update velocities if broadcast from self
-         if (velocityDatum.lockid == MR.playerid){
+         if (velocityDatum.lockid == MR.playerid) {
             console.log("MESSAGE FROM SELF")
             return;
          }
-            let vec = new Vector(
-               velocityDatum.state.velocity[0],
-               velocityDatum.state.velocity[1],
-               velocityDatum.state.velocity[2])
+         let vec = new Vector(
+            velocityDatum.state.velocity[0],
+            velocityDatum.state.velocity[1],
+            velocityDatum.state.velocity[2])
 
-            if (velocityDatum.state.handleIndex == -1) {
+         if (velocityDatum.state.handleIndex == -1) {
 
-               //Move all handles simultaneously
-               state.handles.forEach(function (handle) {
-                  handle.setVelocity(vec);
-               })
-            } else {
-               state.handles[velocityDatum.state.handleIndex].setVelocity(vec)
-               // For now apply friction locally, within handles.js
-            }
+            //Move all handles simultaneously
+            state.handles.forEach(function (handle) {
+               handle.setVelocity(vec);
+            })
+         } else {
+            state.handles[velocityDatum.state.handleIndex].setVelocity(vec)
+            // For now apply friction locally, within handles.js
+         }
       }
 
 
@@ -1235,6 +1311,9 @@ function releaseLocks(state) {
    if (!isControllerDown(input.LC) && !isControllerDown(input.RC)) {
       //console.log("RELEASING")
       for (let i = 0; i < MR.objs.length; i++) {
+         if (!MR.objs[i].lock) {
+            continue;
+         }
          if (MR.objs[i].lock.locked == true) {
             MR.objs[i].lock.locked = false;
             MR.objs[i].lock.release(MR.objs[i].uid);

@@ -431,6 +431,11 @@ class Vector {
       let newV = CG.matrixMultiply(M, vArr);
       return new Vector(newV[0], newV[1], newV[2]);
    }
+
+   static lerp(v0, v1, t){
+      return Vector.add( Vector.mult(v0, (1-t)), (Vector.mult(v1, t)) );
+      //return v0*(1-t)+v1*t
+   }
 }
 
 

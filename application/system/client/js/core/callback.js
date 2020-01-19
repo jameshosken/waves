@@ -197,25 +197,30 @@ MR.syncClient.eventBus.subscribe("object", (json) => {
     */
     const success = json["success"];
     if (success) {
-        console.log("VELOCITY CHANGED")
-
-
+        console.log("Successful Response!")
         console.log(json);
 
 
-
-        let current = MR.objs[json["uid"]];
-
-        //Ignore messages from self
-
-        current.state.velocity = [json["state"]["velocity"][0], json["state"]["velocity"][1], json["state"]["velocity"][2]];
-        current.state.update = json["state"]["update"];
-        current.state.handleIndex = json["state"]["handleIndex"];
-        current.lockid = json["lockid"]
-
-        console.log(current)
-
-
+        if(json["uid"] == 17){
+            //Average Position Syncer
+            let positions = json["state"]["positions"]
+            let current = MR.objs[json["uid"]];
+            
+            current.state.positions = positions;
+            current.state.update = true;
+            //console.log(positions);
+        }else{
+            
+            let current = MR.objs[json["uid"]];
+            //Velocity Change
+            console.log("VELOCITY CHANGED")
+            // console.log(json);
+            current.state.velocity = [json["state"]["velocity"][0], json["state"]["velocity"][1], json["state"]["velocity"][2]];
+            current.state.update = json["state"]["update"];
+            current.state.handleIndex = json["state"]["handleIndex"];
+            current.lockid = json["lockid"]
+            console.log(current)
+        }
     }
     else {
         //console.log("failed object message", json);

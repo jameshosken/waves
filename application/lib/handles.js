@@ -4,6 +4,17 @@ class Handle {
    constructor(x, y, z) {
       this.position = new Vector(x, y, z);
       this.velocity = new Vector(0, 0, 0);
+
+      this.averagePositionBuffer = [];
+      this.bufferPos = 0;
+      this.bufferMax = 8;
+
+      for(let i = 0; i < this.bufferMax; i++){
+         this.averagePositionBuffer[i] = this.position;
+      }
+
+      console.log(this);
+      
    }
 
    update(state) {
@@ -12,7 +23,9 @@ class Handle {
       }
       this.position = Vector.add(this.position, this.velocity);
       //this.position = Vector.add(this.position, Vector.mult(this.velocity, state.deltaTime));  //*deltaTime to compensate for varying framerate
-      this.velocity = Vector.mult(this.velocity, 0.95); //We'll just have to deal with this for now. 
+      this.velocity = Vector.mult(this.velocity, 0.95); //We'll just have to deal with this for now.
+      
+      this.syncToAveragePositionBuffer()
    }
 
    checkBounds(floor){
@@ -30,7 +43,36 @@ class Handle {
       this.velocity = v;
    }
 
+   pushAveragePositionBuffer(pos){
+      this.averagePositionBuffer[this.bufferPos] = pos;
+      this.bufferPos = (this.bufferPos + 1)%this.bufferMax;
+   }
+
+   syncToAveragePositionBuffer(){
+      
+      let v = this.velocity
+      
+      //console.log(v);
+      if(v.magnitude() < 0.0001){
+         // this.position = Vector.zero();
+         let avgPos = Vector.zero();
+         for(let i = 0; i < this.averagePositionBuffer.length; i++){
+            avgPos.add(this.averagePositionBuffer[i]);
+         }
+         
+         avgPos.mult(1 / this.averagePositionBuffer.length);
+
+         let target = Vector.lerp(this.position, avgPos, 0.1);
+         
+         if(isNaN(target.x) || isNaN(target.y) || isNaN(target.z)) return
+         //console.log(target);
+         this.position = target;
+      }else{
+         this.pushAveragePositionBuffer(this.position);
+      }
+   }
 }
+
 
 
 let selection = -1;
