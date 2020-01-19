@@ -196,23 +196,29 @@ MR.syncClient.eventBus.subscribe("object", (json) => {
 
     */
     const success = json["success"];
-     if (success) {
-         console.log("VELOCITY CHANGED")
+    if (success) {
+        console.log("VELOCITY CHANGED")
 
 
         console.log(json);
 
-         let current = MR.objs[json["uid"]];
-            current.state.velocity = [json["state"]["velocity"][0], json["state"]["velocity"][1], json["state"]["velocity"][2]];
-            current.state.update = json["state"]["update"];
-            current.state.handleIndex = json["state"]["handleIndex"];
+
+
+        let current = MR.objs[json["uid"]];
+
+        //Ignore messages from self
+
+        current.state.velocity = [json["state"]["velocity"][0], json["state"]["velocity"][1], json["state"]["velocity"][2]];
+        current.state.update = json["state"]["update"];
+        current.state.handleIndex = json["state"]["handleIndex"];
+        current.lockid = json["lockid"]
 
         console.log(current)
 
 
     }
-    else{
-      //console.log("failed object message", json);
+    else {
+        //console.log("failed object message", json);
     }
 });
 
@@ -236,16 +242,14 @@ MR.syncClient.eventBus.subscribe("calibration", (json) => {
 });
 
 
-function pollAvatarData() 
-{
-    if (MR.VRIsActive()) 
-    {
+function pollAvatarData() {
+    if (MR.VRIsActive()) {
         const frameData = MR.frameData();
         if (frameData != null) {
             //User Headset
             // const leftInverseView = CG.matrixInverse(frameData.leftViewMatrix);
             // const rightInverseView = CG.matrixInverse(frameData.rightViewMatrix);
-            
+
             // const leftHeadsetPos = CG.matrixTransform(leftInverseView, frameData.pose.position);
             // const rightHeadsetPos = CG.matrixTransform(rightInverseView, frameData.pose.position);
             // const headsetPos = CG.mix(leftHeadsetPos, rightHeadsetPos);

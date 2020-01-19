@@ -1,3 +1,11 @@
+/*
+GENERAL TODO:
+- Broadcast note hits over network
+- Revise handle motion to use controller acceleration rather than velocity
+*/
+
+
+
 "use strict"
 console.log("Start")
 /*--------------------------------------------------------------------------------
@@ -894,20 +902,23 @@ function map_range(value, low1, high1, low2, high2) {
 
 function handleNoteHit(point, state) {
 
+   //Point is in world space. Here multiply by avatar inverse to return to relative space 
+   console.log(state.avatarMatrixInverse)
+   let relativePoint = Vector.matrixMultiply(state.avatarMatrixInverse, point);
 
    //JH: Switch between synth and piano modes:
    if (SYNTH) {
 
-      state.audioContext.playToneAt([point.x, point.y, point.z]);
+      state.audioContext.playToneAt([relativePoint.x, relativePoint.y, relativePoint.z]);
 
    } else {
-      let toneToPlay = map_range(point.y, -1, 2, 0, state.pianoSounds.length);
-      console.log(point.y);
+      let toneToPlay = map_range(relativePoint.y, -1, 2, 0, state.pianoSounds.length);
+      console.log(relativePoint);
       toneToPlay = Math.floor(toneToPlay);
       console.log(toneToPlay);
       let note = state.pianoSounds[toneToPlay]
       console.log(note);
-      state.audioContext.playFileAt(note, [point.x, point.y, point.z])
+      state.audioContext.playFileAt(note, [relativePoint.x, relativePoint.y, relativePoint.z])
    }
 
 
@@ -1145,11 +1156,20 @@ function pollGrab(controller, state) {
       controller.newVelocities.forEach(newVelocity => {
          if (newVelocity.idx == -1) {
             // If all handles are moving, send flag for all handles:
+
+            //Set all local velocities
+            state.handles.forEach(handle =>{
+               handle.setVelocity(newVelocity.vec);
+            })
+            //Broadcast instruction to update all velocities:
             queryLock(16, newVelocity.vec);
          }
          else {
             //If certain handles are moving, update each one individually (using the handle index obtained in handleController() )
             for (let i = 0; i < controller.newVelocities.length; i++) {
+               //Set local velocity:
+               state.handles[controller.newVelocities[i].idx].setVelocity(newVelocity.vec);
+               //Broadcast velocty to network:
                queryLock(controller.newVelocities[i].idx, newVelocity.vec);
             }
          }
@@ -1161,30 +1181,37 @@ function pollGrab(controller, state) {
    UPDATE VELOCITIES
    Update all velocities! // TODO break this out to separate function; do after request locks
    */
-   
+
    MR.objs.forEach(velocityDatum => {
       //Check if update requested:
       if (velocityDatum.state.update == true) {
          console.log("UPDATE REQUESTED")
+         console.log("FROM:" +  velocityDatum.lockid + " (I AM " + MR.playerid + ")")
+         
 
          //set update request back to false:
          velocityDatum.state.update = false;
 
-       let vec = new Vector(
-         velocityDatum.state.velocity[0],
-         velocityDatum.state.velocity[1],
-         velocityDatum.state.velocity[2])
-
-         if (velocityDatum.state.handleIndex == -1) {
-            
-            //Move all handles simultaneously
-            state.handles.forEach(function (handle) {
-               handle.setVelocity(vec);
-            })
-         } else {
-            state.handles[velocityDatum.state.handleIndex].setVelocity(vec)
-            // For now apply friction locally, within handles.js
+         //Do not update velocities if broadcast from self
+         if (velocityDatum.lockid == MR.playerid){
+            console.log("MESSAGE FROM SELF")
+            return;
          }
+            let vec = new Vector(
+               velocityDatum.state.velocity[0],
+               velocityDatum.state.velocity[1],
+               velocityDatum.state.velocity[2])
+
+            if (velocityDatum.state.handleIndex == -1) {
+
+               //Move all handles simultaneously
+               state.handles.forEach(function (handle) {
+                  handle.setVelocity(vec);
+               })
+            } else {
+               state.handles[velocityDatum.state.handleIndex].setVelocity(vec)
+               // For now apply friction locally, within handles.js
+            }
       }
 
 
