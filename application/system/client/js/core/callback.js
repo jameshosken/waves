@@ -197,29 +197,47 @@ MR.syncClient.eventBus.subscribe("object", (json) => {
     */
     const success = json["success"];
     if (success) {
-        console.log("Successful Response!")
-        console.log(json);
+        //console.log("Successful Response!")
+        //console.log(json);
 
+        try{
+            if(json["uid"] == 18){
+                
+                //Average Position Syncer
+                let position = json["state"]["position"]
+                let current = MR.objs[json["uid"]];
+                if(json["lockid"] == MR.playerid){
+                    console.log("Samesies")
+                    return;
+                }
+                current.state.position = position;
+                current.state.update = true;
+                //console.log(positions);
+            }
+            if(json["uid"] == 17){
 
-        if(json["uid"] == 17){
-            //Average Position Syncer
-            let positions = json["state"]["positions"]
-            let current = MR.objs[json["uid"]];
-            
-            current.state.positions = positions;
-            current.state.update = true;
-            //console.log(positions);
-        }else{
-            
-            let current = MR.objs[json["uid"]];
-            //Velocity Change
-            console.log("VELOCITY CHANGED")
-            // console.log(json);
-            current.state.velocity = [json["state"]["velocity"][0], json["state"]["velocity"][1], json["state"]["velocity"][2]];
-            current.state.update = json["state"]["update"];
-            current.state.handleIndex = json["state"]["handleIndex"];
-            current.lockid = json["lockid"]
-            console.log(current)
+                //Average Position Syncer
+                let positions = json["state"]["positions"]
+                let current = MR.objs[json["uid"]];
+                
+                current.state.positions = positions;
+                current.state.update = true;
+                //console.log(positions);
+            }else{
+                
+                let current = MR.objs[json["uid"]];
+                //Velocity Change
+                console.log("VELOCITY CHANGED")
+                // console.log(json);
+                current.state.velocity = [json["state"]["velocity"][0], json["state"]["velocity"][1], json["state"]["velocity"][2]];
+                current.state.update = json["state"]["update"];
+                current.state.handleIndex = json["state"]["handleIndex"];
+                current.lockid = json["lockid"]
+                console.log(current)
+            }
+        }
+        catch(err){
+            console.log(err);
         }
     }
     else {

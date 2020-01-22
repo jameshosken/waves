@@ -27,6 +27,7 @@ class SpatialAudioContext {
         });
 
         this.initGain();
+        this.setGain(6);
         this.initReverb();
         this.initPanner();
         this.pausedAt = 0;

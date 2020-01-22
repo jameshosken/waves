@@ -8,6 +8,7 @@ GENERAL TODO:
 
 
 "use strict"
+
 console.log("Start")
 /*--------------------------------------------------------------------------------
 
@@ -42,8 +43,8 @@ const RES = 9; //REsolution of grid
 const COLLISIONTHRESHOLD = 0.05;
 
 const SYNTH = false;
-
-
+const MUSICTYPE = "PIANO_MINOR"   //XMOD / PIANO_MAJOR/ PIANO_MINOR / PIANO_PENTA / PIANOO ALL
+const SYNC = true;
 
 
 ////////////////////////////// SCENE SPECIFIC CODE
@@ -66,7 +67,7 @@ function sendSpawnMessage(object) {
 
 let setupWorld = function (state) {
 
-   let scl = .5
+   let scl = .33
    let c = 0;
    if (state.handles == undefined) {
       state.handles = [];
@@ -96,7 +97,7 @@ let setupWorld = function (state) {
 
       // Add flag for 'all' handles
       let data = {
-         uid: c,
+         uid: c, //16
          state: {
             velocity: Vector.zero().toArray(),
             handleIndex: -1,
@@ -106,12 +107,14 @@ let setupWorld = function (state) {
       }
       c++;
 
+
+
       MR.objs.push(data);
       sendSpawnMessage(data);
    }
 
    //Setup an interval to sync handle positions every second
-   let data = {
+   let syncData = {
       type: "spawn",
       uid: 17,  //Next index in sequence for sync timer  TODO: find better way of doing this
       state: {
@@ -120,14 +123,31 @@ let setupWorld = function (state) {
       }
    }
 
-   MR.objs.push(data);
-   sendSpawnMessage(data);
+   MR.objs.push(syncData);
+   sendSpawnMessage(syncData);
+
+   //Setup an obj for musical hits
+   let musicData = {
+      type: "spawn",
+      uid: 18,  //Next index in sequence for music hits  TODO: find better way of doing this
+      state: {
+         position: [0, 0, 0],
+         update: false
+      }
+   }
+
+   MR.objs.push(musicData);
+   sendSpawnMessage(musicData);
 
    let broadcastPosition = () => {
-
+      if (!SYNC) {
+         return;
+      }
       let posArr = [];
       state.handles.forEach(handle => {
-         posArr.push(handle.position.toArray());
+         //position = position.matrixMultiply(position, state.avatarMatrixForward);   
+         let worldPos = Vector.matrixMultiply(state.avatarMatrixForward, handle.position) // Put positions relative to world
+         posArr.push(worldPos.toArray());
       })
 
       const response =
@@ -140,8 +160,8 @@ let setupWorld = function (state) {
          },
          lockid: MR.playerid
       };
-      console.log("Sending handle sync data:")
-      console.log(response);
+      //console.log("Sending handle sync data:")
+      //console.log(response);
       MR.syncClient.send(response);
    }
 
@@ -152,13 +172,13 @@ let setupWorld = function (state) {
       state.handleSyncTimer = setInterval(broadcastPosition, 250);
    }
 
-   console.log("MR OBJS:");
-   console.log(MR.objs);
+   //console.log("MR OBJS:");
+   //console.log(MR.objs);
 
    //HERE OFFSET WORLD 
 
    if (!state.worldOffset) {
-      state.worldOffset = new Vector(0, 0, 0);
+      state.worldOffset = new Vector(0, 1, 0);
    }
 
    for (let i = 0; i < state.handles.length; i++) {
@@ -187,46 +207,120 @@ let setupWorld = function (state) {
 
 
    if (state.pianoSounds == null) {
+
+
       state.pianoSounds = [];
 
-      for (let i = 1; i < 8; i++) {
-         let path = "assets/audio/pianoloud/"
-         let medTail = "-49-96.wav"
-
-         let loudTail = "-97-127.wav"
-
-         let Ab = path + "Ab" + i + loudTail;
-         let A = path + "A" + i + loudTail;
-         let Bb = path + "Bb" + i + loudTail;
-         let B = path + "B" + i + loudTail;
-         let C = path + "C" + i + loudTail;
-         let Db = path + "Db" + i + loudTail;
-         let D = path + "D" + i + loudTail;
-         let Eb = path + "Eb" + i + loudTail;
-         let E = path + "E" + i + loudTail;
-         let F = path + "F" + i + loudTail;
-         let Gb = path + "Gb" + i + loudTail;
-         let G = path + "G" + i + loudTail;
-
-         //Pentatonic with 4th:
-         state.pianoSounds.push(C);
-         //state.pianoSounds.push(Db);
-         state.pianoSounds.push(D);
-         //state.pianoSounds.push(Eb);
-         state.pianoSounds.push(E);
-         state.pianoSounds.push(F);
-         //state.pianoSounds.push(Gb);
-         state.pianoSounds.push(G);
-         //state.pianoSounds.push(Ab);
-         state.pianoSounds.push(A);
-         //state.pianoSounds.push(Bb);
-         //state.pianoSounds.push(B);
+      if (MUSICTYPE == "XMOD") {
+         for (let i = 1; i < 8; i++) {
+            let path = "assets/audio/XMOD-16/MP-XM016"
+            let tail = ".WAV"
 
 
+            let D = path + "D" + i + tail;
+            let F = path + "F" + i + tail;
+            let Gs = path + "Gs" + i + tail;
+            let B = path + "B" + i + tail;
+            // let C = path + "C" + i + tail;
+            // let Db = path + "Db" + i + tail;
+            // let D = path + "D" + i + tail;
+            // let Eb = path + "Eb" + i + tail;
+            // let E = path + "E" + i + tail;
+            // let F = path + "F" + i + tail;
+            // let Gb = path + "Gb" + i + tail;
+            // let G = path + "G" + i + tail;
+
+            state.pianoSounds.push(D);
+            state.pianoSounds.push(F);
+            state.pianoSounds.push(Gs);
+
+            state.pianoSounds.push(B);
+
+
+
+         }
+      } else{
+
+         for (let i = 1; i < 8; i++) {
+            let path = "assets/audio/pianoloud/"
+            let medTail = "-49-96.wav"
+
+            let loudTail = "-97-127.wav"
+
+            let Ab = path + "Ab" + i + loudTail;
+            let A = path + "A" + i + loudTail;
+            let Bb = path + "Bb" + i + loudTail;
+            let B = path + "B" + i + loudTail;
+            let C = path + "C" + i + loudTail;
+            let Db = path + "Db" + i + loudTail;
+            let D = path + "D" + i + loudTail;
+            let Eb = path + "Eb" + i + loudTail;
+            let E = path + "E" + i + loudTail;
+            let F = path + "F" + i + loudTail;
+            let Gb = path + "Gb" + i + loudTail;
+            let G = path + "G" + i + loudTail;
+
+
+            if(MUSICTYPE == "PIANO_MAJOR"){
+               state.pianoSounds.push(C);
+               // state.pianoSounds.push(Db);
+               state.pianoSounds.push(D);
+               // state.pianoSounds.push(Eb);
+               state.pianoSounds.push(E);
+               state.pianoSounds.push(F);
+               // state.pianoSounds.push(Gb);
+               state.pianoSounds.push(G);
+               // state.pianoSounds.push(Ab);
+               state.pianoSounds.push(A);
+               // state.pianoSounds.push(Bb);
+               state.pianoSounds.push(B);
+            }else if(MUSICTYPE == "PIANO_MINOR"){
+               state.pianoSounds.push(C);
+               // state.pianoSounds.push(Db);
+               state.pianoSounds.push(D);
+               state.pianoSounds.push(Eb);
+               // state.pianoSounds.push(E);
+               state.pianoSounds.push(F);
+               // state.pianoSounds.push(Gb);
+               state.pianoSounds.push(G);
+               state.pianoSounds.push(Ab);
+               // state.pianoSounds.push(A);
+               state.pianoSounds.push(Bb);
+               // state.pianoSounds.push(B);
+            }else if(MUSICTYPE == "PIANO_PENTA"){
+               state.pianoSounds.push(C);
+               // state.pianoSounds.push(Db);
+               state.pianoSounds.push(D);
+               // state.pianoSounds.push(Eb);
+               state.pianoSounds.push(E);
+               // state.pianoSounds.push(F);
+               // state.pianoSounds.push(Gb);
+               state.pianoSounds.push(G);
+               // state.pianoSounds.push(Ab);
+               state.pianoSounds.push(A);
+               // state.pianoSounds.push(Bb);
+               // state.pianoSounds.push(B);
+            }else {
+               state.pianoSounds.push(C);
+               state.pianoSounds.push(Db);
+               state.pianoSounds.push(D);
+               state.pianoSounds.push(Eb);
+               state.pianoSounds.push(E);
+               state.pianoSounds.push(F);
+               state.pianoSounds.push(Gb);
+               state.pianoSounds.push(G);
+               state.pianoSounds.push(Ab);
+               state.pianoSounds.push(A);
+               state.pianoSounds.push(Bb);
+               state.pianoSounds.push(B);
+            }
+            
+
+
+         }
+      
       }
    }
-
-   console.log(state.pianoSounds)
 
 }
 
@@ -290,7 +384,7 @@ let updateHandles = function (state) {
    if (state.handles) {
       for (let i = 0; i < state.handles.length; i++) {
          state.handles[i].update(state);
-         state.handles[i].checkBounds(-EYE_HEIGHT);
+         state.handles[i].checkBounds(state, 0);
       }
    }
 }
@@ -303,7 +397,7 @@ let syncHandles = function (state) {
       }
       for (let i = 0; i < state.handles.length; i++) {
          state.handles[i].update(state);
-         state.handles[i].checkBounds(-EYE_HEIGHT);
+         state.handles[i].checkBounds(state, 0);
       }
    }
 }
@@ -486,6 +580,7 @@ function onStartFrame(t, state) {
    //Create controller & headset handlers each time VR mode is entered
    if (MR.VRIsActive()) {
       if (!input.HS) input.HS = new HeadsetHandler(MR.headset);
+
       if (!input.LC) input.LC = new ControllerHandler(MR.leftController);
       if (!input.RC) input.RC = new ControllerHandler(MR.rightController);
 
@@ -641,6 +736,9 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
 
 
    let drawController = (C, color) => {
+      if (!C.active) {
+         return;
+      }
 
       let P = C.position(), s = C.isDown() ? .0125 : .0225;
       m.multiply(state.avatarMatrixForward)
@@ -705,6 +803,44 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       }
 
    }
+   let drawOtherHeadset = (pos, rot, color) => {
+
+      let P = pos;
+      m.save();
+
+      m.translate(P[0], P[1], P[2]);
+      m.rotateQ(rot);
+      m.save();
+      m.scale(0.1, 0.1, 0.1);
+      drawLines(CG.cube, color, 2);
+      m.restore();
+
+      m.restore();
+   }
+   let drawOtherController = (pos, rot, color) => {
+
+      let P = pos;
+      m.save();
+
+
+      m.translate(P[0], P[1], P[2]);
+      m.rotateQ(rot);
+      m.save();
+      m.scale(0.01, 0.01, 0.1);
+      drawLines(CG.cube, color, 2);
+      m.restore();
+      m.save();
+      m.scale(0.05, 0.01, 0.01);
+      drawLines(CG.cube, color, 2);
+      m.restore();
+      m.save();
+      m.scale(0.01, 0.05, 0.01);
+      drawLines(CG.cube, color, 2);
+      m.restore();
+
+
+      m.restore();
+   }
 
    m.save();
    if (input.LC) {
@@ -728,7 +864,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
 
    let envColour = [0, .2, .5]
    //DRAW GRID
-   let floor = -EYE_HEIGHT
+   let floor = 0;//-EYE_HEIGHT
    m.save();
 
    //SUN
@@ -765,30 +901,29 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
 
    //FLOOR
    m.save();
-   m.translate(0, floor - 0.1, 0);
+   m.translate(0, floor - 0.02, 0);
    m.scale(1000, .01, 1000);
    drawStrip(CG.sphere, [0, 0, 0]);
    m.restore();
 
-
    //FLOOR GRID
    for (let x = -10; x < 10; x++) {
       m.save();
-
       m.scale(1, 1, 1000);
-      m.translate((x * 0.5) ** 3, -EYE_HEIGHT, 0);
-
+      m.translate((x * 0.5) ** 3, 0, 0);
       drawLines(CG.line, envColour, 2);
       m.restore();
 
       m.save();
       m.rotateY(Math.PI / 2);
       m.scale(1, 1, 1000);
-      m.translate((x * 0.5) ** 3, -EYE_HEIGHT, 0);
-
+      m.translate((x * 0.5) ** 3, 0, 0);
       drawLines(CG.line, envColour, 2);
       m.restore();
    }
+
+
+
 
 
    if (state.triangles) {
@@ -821,6 +956,46 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
    m.restore();
 
 
+   /**
+    * DRAW OTHER AVATARS
+    */
+   for (let id in MR.avatars) {
+      const avatar = MR.avatars[id];
+
+      if (avatar.mode == MR.UserType.vr) {
+
+         if (MR.playerid == avatar.playerid)
+            continue;
+
+         //console.log(avatar);
+
+         let headsetPos = avatar.headset.position;
+         let headsetRot = avatar.headset.orientation;
+
+         if (headsetPos == null || headsetRot == null)
+            continue;
+
+         if (typeof headsetPos == 'undefined') {
+
+         }
+
+         const rcontroller = avatar.rightController;
+         const lcontroller = avatar.leftController;
+
+         let hpos = headsetPos.slice();
+         // hpos[1] += EYE_HEIGHT;
+
+         drawOtherHeadset(hpos, headsetRot, [1, 1, 1]);
+         let lpos = lcontroller.position.slice();
+         // lpos[1] += EYE_HEIGHT;
+         let rpos = rcontroller.position.slice();
+         // rpos[1] += EYE_HEIGHT;
+
+         drawOtherController(rpos, rcontroller.orientation, [1, 0, 0]);
+         drawOtherController(lpos, lcontroller.orientation, [0, 1, 1]);
+      }
+   }
+
 }
 
 function onEndFrame(t, state) {
@@ -840,8 +1015,8 @@ function onEndFrame(t, state) {
       }
    }
 
-   if (input.LC) input.LC.onEndFrame();
-   if (input.RC) input.RC.onEndFrame();
+   if (input.LC && input.LC.active) input.LC.onEndFrame();
+   if (input.RC && input.RC.active) input.RC.onEndFrame();
 }
 
 export default function main() {
@@ -919,6 +1094,13 @@ function HeadsetHandler(headset) {
 }
 
 function ControllerHandler(controller) {
+   if (controller) {
+      this.active = true;
+   } else {
+      this.active = false;
+      return;
+   }
+
 
    this.isDown = () => controller.buttons[1].pressed;
 
@@ -956,28 +1138,72 @@ function map_range(value, low1, high1, low2, high2) {
 }
 
 
-function handleNoteHit(point, state) {
+function broadcastNoteHit(pos) {
+   const response =
+   {
+      type: "object",
+      uid: 18,
+      state: {
+         position: pos.toArray(),
+         update: true
+      },
+      lockid: MR.playerid,
+   };
+   //console.log(response);
+   MR.syncClient.send(response);
+}
 
-   //Point is in world space. Here multiply by avatar inverse to return to relative space 
-   console.log(state.avatarMatrixInverse)
-   let relativePoint = Vector.matrixMultiply(state.avatarMatrixInverse, point);
+function playNoteAt(state, point) {
+   //console.log(point);
+   let relativePoint = Vector.matrixMultiply(state.avatarMatrixForward, point);
+   
+   if (state.audioContext) {
+      if (SYNTH) {
+         state.audioContext.playToneAt([point.x, point.y, point.z]);
 
-   //JH: Switch between synth and piano modes:
-   if (SYNTH) {
+      } else {
 
-      state.audioContext.playToneAt([relativePoint.x, relativePoint.y, relativePoint.z]);
+         let toneToPlay = map_range(point.y, .5, 3, 0, state.pianoSounds.length);
+         console.log(toneToPlay);
+         if(toneToPlay < 0)
+            toneToPlay = 0;
+         if(toneToPlay > state.pianoSounds.length-1)
+            toneToPlay = state.pianoSounds.length-1;
+            console.log(toneToPlay);
 
-   } else {
-      let toneToPlay = map_range(relativePoint.y, -1, 2, 0, state.pianoSounds.length);
-      console.log(relativePoint);
-      toneToPlay = Math.floor(toneToPlay);
-      console.log(toneToPlay);
-      let note = state.pianoSounds[toneToPlay]
-      console.log(note);
-      state.audioContext.playFileAt(note, [relativePoint.x, relativePoint.y, relativePoint.z])
+         toneToPlay = Math.floor(toneToPlay);
+         console.log(toneToPlay);
+         let note = state.pianoSounds[toneToPlay]
+         //console.log(note);
+         // console.log("Point:")
+         // console.log(point);
+         // console.log("Playing relative note:")
+         // console.log(point)
+         let hsPos = new Vector(state.input.HS.position()[0],state.input.HS.position()[1],state.input.HS.position()[2]);
+         console.log("Orientation!")
+         console.log(Vector.sub(hsPos, point).toArray())
+         state.audioContext.playFileAt(note, point.toArray(), Vector.sub(hsPos, point).toArray())
+      }
    }
+}
+function handleNoteHit(point, state) {
+   console.log("LOCAL NOTE!")
+   console.log(point)
+   playNoteAt(state, point)
+   broadcastNoteHit(point);
+   createNewRandomGeometryOnHit(state, point)
+}
 
+function handleNoteHitFromOtherUser(state, point) {
+   //let relativePoint = Vector.matrixMultiply(state.avatarMatrixInverse, point);
+   console.log("SERVER NOTE!")
+   console.log(point);
+   playNoteAt(state, point);
 
+   createNewRandomGeometryOnHit(state, point);
+}
+
+function createNewRandomGeometryOnHit(state, point) {
    //JH NEXT STEP: a harder hit results in more geometry spawned.  
    if (Math.random() < 0.8) {
       createNewGeometryOnHit(point, CG.line, state.lines);
@@ -988,9 +1214,7 @@ function handleNoteHit(point, state) {
    if (Math.random() < 0.3) {
       createNewGeometryOnHit(point, CG.square, state.squares);
    }
-
 }
-
 
 function createNewGeometryOnHit(point, type, arr) {
    let velocity = new Vector(
@@ -1025,8 +1249,10 @@ function handleMultiplayerController(state) {
 
 
 function handleController(controller, state) {
-   if (controller) {
-      controller.newVelocities = []; //EMpty array to populate with velocities (to send to other clients)
+   if (controller && controller.active) {
+
+      controller.newVelocities = []; //Empty array to populate with velocities (to send to other clients)
+
       let tip = controller.tip();
       let pos = new Vector(tip[0], tip[1], tip[2]);
       let patches = state.patches;
@@ -1107,9 +1333,11 @@ function handleController(controller, state) {
 let calibrate = function (input, state) {
 
    m.save();
-   if (input.LC) {
+   if (input.LC && input.LC.active) {
+      
       let LP = input.LC.center();
       let RP = input.RC.center();
+      let HP = input.HS.position();
       let D = CG.subtract(LP, RP);
       let d = metersToInches(CG.norm(D));
       let getX = C => {
@@ -1126,35 +1354,50 @@ let calibrate = function (input, state) {
       let rx = getX(input.RC);
       let sep = metersToInches(2 * RING_RADIUS);
 
-      if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
+
+      if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .06 && Math.abs(rx) < .06) {
+         state.position = [0,0,0];
          if (state.calibrationCount === undefined)
             state.calibrationCount = 0;
          if (++state.calibrationCount == 30) {
 
+            let center = CG.mix(LP, RP, .5);
+            let cVec = new Vector(center[0], center[1], center[2])
+            let hVec = new Vector(HP[0], HP[1], HP[2]);
+            let headsetOffset = Vector.sub(hVec, cVec);
 
             //Multiply by forward to find world value of handles
             console.log("Calibrating!")
             for (let i = 0; i < state.handles.length; i++) {
 
+               //state.handles[i].position = Vector.add(state.handles[i].position, headsetOffset)
                state.handles[i].position = Vector.matrixMultiply(state.avatarMatrixForward, state.handles[i].position);
 
             }
 
 
+
             m.save();
             m.identity();
-            m.translate(CG.mix(LP, RP, .5));
+            m.translate(center);
+            // m.translate(headsetOffset.toArray())
+            // m.translate(Vector.sub(headsetOffset, cVec).toArray());
+            //m.translate(Vector.sub(cVec, headsetOffset).toArray())
             m.rotateY(Math.atan2(D[0], D[2]) + Math.PI / 2);
-            m.translate(0, 0, 0);
+
+
+            m.translate(0, 0, -2);
             //m.translate(-2.35, 1.00, -.72);
-            //m.translate(-.5, .5, .5);
+
             state.avatarMatrixForward = CG.matrixInverse(m.value());
             state.avatarMatrixInverse = m.value();
+            MR.avatarMatrixForward = state.avatarMatrixInverse;   // NO IDEA why this is inverse bt
+            MR.avatarMatrixInverse = state.avatarMatrixForward;
             m.restore();
 
-
-            //Multiply by inverse to find new relative value
+            // //Multiply by inverse to find new relative value
             for (let i = 0; i < state.handles.length; i++) {
+               //state.handles[i].position = Vector.sub(state.handles[i].position, headsetOffset)
                state.handles[i].position = Vector.matrixMultiply(state.avatarMatrixInverse, state.handles[i].position);
             }
 
@@ -1180,10 +1423,9 @@ function pollGrab(controller, state) {
    //request lock
 
    let queryLock = (i, vec) => {
-      console.log("Querying Lock")
+      //console.log("Querying Lock")
       if (MR.objs[i].lock.locked) {
-         console.log("Lock Held")
-
+         //console.log("Lock Held")
          //Update MR obj with velocity from controller
          MR.objs[i].state.velocity = vec.toArray();
 
@@ -1198,7 +1440,7 @@ function pollGrab(controller, state) {
             },
             lockid: MR.playerid,
          };
-         console.log(response);
+         //console.log(response);
          MR.syncClient.send(response);
 
       } else {
@@ -1208,7 +1450,7 @@ function pollGrab(controller, state) {
       }
    }
 
-   if (controller) {
+   if (controller && controller.active) {
       controller.newVelocities.forEach(newVelocity => {
          if (newVelocity.idx == -1) {
             // If all handles are moving, send flag for all handles:
@@ -1239,13 +1481,26 @@ function pollGrab(controller, state) {
    */
 
    MR.objs.forEach(velocityDatum => {
+
+      if (velocityDatum.uid == 18) {
+         let musicData = velocityDatum;
+         if (musicData.state.update) {
+            musicData.state.update = false;
+            let notePosition = new Vector(musicData.state.position[0], musicData.state.position[1], musicData.state.position[2]);
+            handleNoteHitFromOtherUser(state, notePosition)
+         }
+      }
       if (velocityDatum.uid == 17) {
 
          //Is position data
-         let positionData = velocityDatum;   // Semiantics
+         let positionData = velocityDatum;   // Semantics
 
-         if (positionData.state.update == true ) {
-            console.log("Updating positions")
+         if (positionData.lockid == MR.playerid) {
+            return;
+         }
+
+         if (positionData.state.update == true) {
+            //console.log("Updating positions")
             //set update request back to false:
             positionData.state.update = false;
 
@@ -1254,23 +1509,24 @@ function pollGrab(controller, state) {
             for (let i = 0; i < positions.length; i++) {
                let handle = state.handles[i];
                let position = new Vector(positions[i][0], positions[i][1], positions[i][2]);
+               position = Vector.matrixMultiply(state.avatarMatrixInverse, position);   // Put positions relative to self
                handle.pushAveragePositionBuffer(position);
             }
          }
 
          return
       }
+
       //Check if update requested:
       if (velocityDatum.state.update == true) {
-         console.log("UPDATE REQUESTED")
-         console.log("FROM:" + velocityDatum.lockid + " (I AM " + MR.playerid + ")")
+         // console.log("UPDATE REQUESTED")
+         // console.log("FROM:" + velocityDatum.lockid + " (I AM " + MR.playerid + ")")
 
          //set update request back to false:
          velocityDatum.state.update = false;
 
          //Do not update velocities if broadcast from self
          if (velocityDatum.lockid == MR.playerid) {
-            console.log("MESSAGE FROM SELF")
             return;
          }
          let vec = new Vector(
@@ -1298,7 +1554,7 @@ function pollGrab(controller, state) {
 }
 
 function isControllerDown(controller) {
-   if (controller) {
+   if (controller && controller.active) {
       if (controller.isDown()) return true;
       if (controller.isButtonDown(3)) return true;
    }

@@ -3,6 +3,7 @@ class Handle {
 
    constructor(x, y, z) {
       this.position = new Vector(x, y, z);
+      this.worldPos = Vector.zero();
       this.velocity = new Vector(0, 0, 0);
 
       this.averagePositionBuffer = [];
@@ -24,13 +25,14 @@ class Handle {
       this.position = Vector.add(this.position, this.velocity);
       //this.position = Vector.add(this.position, Vector.mult(this.velocity, state.deltaTime));  //*deltaTime to compensate for varying framerate
       this.velocity = Vector.mult(this.velocity, 0.95); //We'll just have to deal with this for now.
-      
+      this.worldPos = Vector.matrixMultiply(state.avatarMatrixForward, this.position);
       this.syncToAveragePositionBuffer()
    }
 
-   checkBounds(floor){
-      if(this.position.y < floor){
-         this.position.y = floor;   
+   checkBounds(state, floor){
+      if(this.worldPos.y < floor){
+         this.worldPos.y = floor;   
+         this.position = Vector.matrixMultiply(state.avatarMatrixInverse, this.worldPos);
          this.velocity.y *= -1;
       }
    }
@@ -50,19 +52,22 @@ class Handle {
 
    syncToAveragePositionBuffer(){
       
-      let v = this.velocity
+      let v = this.velocity;
+      let p = this.position;
       
       //console.log(v);
-      if(v.magnitude() < 0.0001){
+      if(v.magnitude() < 0.00001){
+         this.velocity = Vector.zero();
          // this.position = Vector.zero();
          let avgPos = Vector.zero();
          for(let i = 0; i < this.averagePositionBuffer.length; i++){
             avgPos.add(this.averagePositionBuffer[i]);
+            // avgPos.add(p);
          }
          
          avgPos.mult(1 / this.averagePositionBuffer.length);
 
-         let target = Vector.lerp(this.position, avgPos, 0.1);
+         let target = Vector.lerp(this.position, avgPos, 0.025);
          
          if(isNaN(target.x) || isNaN(target.y) || isNaN(target.z)) return
          //console.log(target);
