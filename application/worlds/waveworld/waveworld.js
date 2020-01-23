@@ -56,7 +56,7 @@ const RES = 9; //REsolution of grid
 const COLLISIONTHRESHOLD = 0.05;
 
 const SYNTH = false;
-const MUSICTYPE = "PIANO_MINOR"   //XMOD / PIANO_MAJOR/ PIANO_MINOR / PIANO_PENTA / PIANO ALL
+const MUSICTYPE = "PIANO_MAJOR"   //XMOD / PIANO_MAJOR/ PIANO_MINOR / PIANO_PENTA / PIANO ALL
 const SYNC = true;
 
 
@@ -961,6 +961,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       });
    }
 
+   
+
    m.restore();
 
 
@@ -1003,6 +1005,18 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
          drawOtherController(lpos, lcontroller.orientation, [0, 1, 1]);
       }
    }
+
+
+   /**
+    * DRAW TABLE
+    */
+
+   m.save();
+   m.translate(0,0,-1.975-0.5);
+   m.scale(1, 1, .5);
+   drawLines(CG.cube, palette.orange, 2);
+   m.restore();
+
 
 }
 
@@ -1362,7 +1376,8 @@ let calibrate = function (input, state) {
       let sep = metersToInches(2 * RING_RADIUS);
 
       let default_condition = (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .06 && Math.abs(rx) < .06);
-      let override_condition = (input.LC.isButtonDown(3) && input.RC.isButtonDown(3) && input.RC.isDown() && input.LC.isDown());
+      // let override_condition = (input.LC.isButtonDown(2) && input.RC.isButtonDown(2) && input.RC.isDown() && input.LC.isDown());
+      let override_condition = false;
       // if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .06 && Math.abs(rx) < .06) {
          if(default_condition || override_condition){
          state.position = [0,0,0];
@@ -1395,7 +1410,7 @@ let calibrate = function (input, state) {
             m.rotateY(Math.atan2(D[0], D[2]) + Math.PI / 2);
 
 
-            m.translate(0, -1.2, -2);
+            m.translate(0, -1.2, 1.5+0.5);
             //m.translate(-2.35, 1.00, -.72);
 
             state.avatarMatrixForward = CG.matrixInverse(m.value());
