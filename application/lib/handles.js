@@ -50,6 +50,14 @@ class Handle {
       this.bufferPos = (this.bufferPos + 1)%this.bufferMax;
    }
 
+   flushAveragePositionBuffer(pos){
+      for(let i = 0; i < this.averagePositionBuffer.length; i++){
+         this.averagePositionBuffer[i] = pos;
+         this.bufferPos = i;
+      }
+      
+   }
+
    syncToAveragePositionBuffer(){
       
       let v = this.velocity;

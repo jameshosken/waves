@@ -90,8 +90,8 @@ vec3 bumpSampler(vec3 v){
 vec3 handleShading(){
 
    // vec3 blue = vec3(0,0,1);
-   vec3 purp = vec3(1,0,1);
-
+   // vec3 purp = vec3(1,0,1);
+   vec3 purp = uColor;
    // float gradient =  (vPos.y*vPos.y);
    // vec3 col = mix(purp, blue,  gradient);
 

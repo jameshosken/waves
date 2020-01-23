@@ -35,10 +35,14 @@ class PhyscisBody {
        this.transform = transform;
        this.physicsBody = null;
        this.age = 0;
+       this.colour = [1,1,1];
     }
- 
+    
     addPhysicsBody(velocity = new Vector(0, 0, 0), angularMomentum = new Vector(0, 0, 0)) {
        this.physicsBody = new PhyscisBody(velocity, angularMomentum);
+    }
+    addColour(_colour){
+       this.colour = _colour;
     }
  
     applyTransform(m) {

@@ -29,6 +29,19 @@ const MAX_TRIANGLES = 100;
 
 const MAX_SQUARES = 100;
 
+
+const palette = {
+   pink_light: [0.929,0.035,0.616],
+   pink: [0.929,0,0.604],
+   pink_dark: [0.576,0,0.376],
+   orange_light:  [1,      0.4,   0],
+   orange:        [0.8,      0.3,    0],
+   orange_dark:   [0.6,  0.2,   0],
+   blue_light: [0.4,0.35,1],
+   blue: [0.2,0.2,0.1],
+   blue_dark: [0.05,0.05,0.6]
+}
+
 let MATERIALS = {
    default: 0,
    sun: 1,
@@ -43,7 +56,7 @@ const RES = 9; //REsolution of grid
 const COLLISIONTHRESHOLD = 0.05;
 
 const SYNTH = false;
-const MUSICTYPE = "PIANO_MINOR"   //XMOD / PIANO_MAJOR/ PIANO_MINOR / PIANO_PENTA / PIANOO ALL
+const MUSICTYPE = "PIANO_MINOR"   //XMOD / PIANO_MAJOR/ PIANO_MINOR / PIANO_PENTA / PIANO ALL
 const SYNC = true;
 
 
@@ -185,15 +198,12 @@ let setupWorld = function (state) {
       state.handles[i].position.add(state.worldOffset);
    }
 
-
    if (state.patches == null) {
       updatePatches(state);
    }
 
-
    if (state.triangles == null) {
       state.triangles = [];
-
    }
 
    if (state.squares == null) {
@@ -204,10 +214,7 @@ let setupWorld = function (state) {
       state.lines = [];
    }
 
-
-
    if (state.pianoSounds == null) {
-
 
       state.pianoSounds = [];
 
@@ -352,9 +359,6 @@ let updatePatches = function (state) {
 }
 
 let updateObjects = function (state) {
-   /**
-    * UPDATE OBJECTS HERE
-    */
    for (let i = 0; i < state.triangles.length; i++) {
       let tri = state.triangles[i];
       tri.update();
@@ -716,7 +720,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       let pos = state.handles[i].position;
       m.translate(pos.x, pos.y, pos.z);
       m.scale(.03, .03, .03);
-      drawStrip(CG.sphere, [0.33, .33, 0.0], 2);
+      // drawStrip(CG.sphere, [0.33, .33, 0.0], 2);
+      drawStrip(CG.sphere, palette.orange_dark, 2);
 
       m.restore();
    }
@@ -727,7 +732,9 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
 
    m.multiply(state.avatarMatrixForward);
    patches.forEach(function (patch) {
-      drawLines(patch.mesh, [1, 0, 1]);
+      // drawLines(patch.mesh, [1, 0, 1]);
+      drawLines(patch.mesh, palette.pink);
+      
    })
 
 
@@ -903,7 +910,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
    m.save();
    m.translate(0, floor - 0.02, 0);
    m.scale(1000, .01, 1000);
-   drawStrip(CG.sphere, [0, 0, 0]);
+   drawStrip(CG.sphere, [0,0,0]);
    m.restore();
 
    //FLOOR GRID
@@ -911,14 +918,15 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       m.save();
       m.scale(1, 1, 1000);
       m.translate((x * 0.5) ** 3, 0, 0);
-      drawLines(CG.line, envColour, 2);
+      // drawLines(CG.line, envColour, 2);
+      drawLines(CG.line, palette.blue_dark, 2);
       m.restore();
 
       m.save();
       m.rotateY(Math.PI / 2);
       m.scale(1, 1, 1000);
       m.translate((x * 0.5) ** 3, 0, 0);
-      drawLines(CG.line, envColour, 2);
+      drawLines(CG.line, palette.blue_dark, 2);
       m.restore();
    }
 
@@ -930,7 +938,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       state.triangles.forEach(function (tri) {
          m.save();
          tri.applyTransform(m);
-         drawLines(tri.mesh, [1, 0, 1], 2)
+         drawLines(tri.mesh, tri.colour, 2)
          m.restore();
       });
    }
@@ -939,7 +947,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       state.squares.forEach(function (sq) {
          m.save();
          sq.applyTransform(m);
-         drawLines(sq.mesh, [1, 0, 1], 2)
+         drawLines(sq.mesh, sq.colour, 2)
          m.restore();
       });
    }
@@ -948,7 +956,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx) {
       state.lines.forEach(function (line) {
          m.save();
          line.applyTransform(m);
-         drawLines(line.mesh, [1, 0, 1], 2)
+         drawLines(line.mesh, line.colour, 2)
          m.restore();
       });
    }
@@ -1154,8 +1162,8 @@ function broadcastNoteHit(pos) {
 }
 
 function playNoteAt(state, point) {
-   //console.log(point);
-   let relativePoint = Vector.matrixMultiply(state.avatarMatrixForward, point);
+
+   //let relativePoint = Vector.matrixMultiply(state.avatarMatrixForward, point);
    
    if (state.audioContext) {
       if (SYNTH) {
@@ -1174,11 +1182,6 @@ function playNoteAt(state, point) {
          toneToPlay = Math.floor(toneToPlay);
          console.log(toneToPlay);
          let note = state.pianoSounds[toneToPlay]
-         //console.log(note);
-         // console.log("Point:")
-         // console.log(point);
-         // console.log("Playing relative note:")
-         // console.log(point)
          let hsPos = new Vector(state.input.HS.position()[0],state.input.HS.position()[1],state.input.HS.position()[2]);
          console.log("Orientation!")
          console.log(Vector.sub(hsPos, point).toArray())
@@ -1191,7 +1194,7 @@ function handleNoteHit(point, state) {
    console.log(point)
    playNoteAt(state, point)
    broadcastNoteHit(point);
-   createNewRandomGeometryOnHit(state, point)
+   createNewRandomGeometryOnHit(state, point, palette.pink)
 }
 
 function handleNoteHitFromOtherUser(state, point) {
@@ -1199,24 +1202,27 @@ function handleNoteHitFromOtherUser(state, point) {
    console.log("SERVER NOTE!")
    console.log(point);
    playNoteAt(state, point);
-
-   createNewRandomGeometryOnHit(state, point);
+   if(Math.random() < 0.5){
+      createNewRandomGeometryOnHit(state, point, palette.blue_light);
+   }else{
+      createNewRandomGeometryOnHit(state, point, palette.orange_light);
+   }
 }
 
-function createNewRandomGeometryOnHit(state, point) {
+function createNewRandomGeometryOnHit(state, point, colour) {
    //JH NEXT STEP: a harder hit results in more geometry spawned.  
    if (Math.random() < 0.8) {
-      createNewGeometryOnHit(point, CG.line, state.lines);
+      createNewGeometryOnHit(point, CG.line, state.lines, colour);
    }
    if (Math.random() < 0.6) {
-      createNewGeometryOnHit(point, CG.triangle, state.triangles);
+      createNewGeometryOnHit(point, CG.triangle, state.triangles, colour);
    }
    if (Math.random() < 0.3) {
-      createNewGeometryOnHit(point, CG.square, state.squares);
+      createNewGeometryOnHit(point, CG.square, state.squares, colour);
    }
 }
 
-function createNewGeometryOnHit(point, type, arr) {
+function createNewGeometryOnHit(point, type, arr, colour) {
    let velocity = new Vector(
       (Math.random() * 2 - 1) * 0.01,
       (Math.random() * 2 - 1) * 0.01,
@@ -1235,6 +1241,7 @@ function createNewGeometryOnHit(point, type, arr) {
    let t = new Transform(new Vector(point.x, point.y, point.z), rotation, new Vector(0.1, 0.1, 0.1));
    let obj = new Geometry(t, type);
    obj.addPhysicsBody(velocity, angularVeclocity);
+   obj.addColour(colour)
 
    arr.push(obj);
 }
@@ -1354,8 +1361,10 @@ let calibrate = function (input, state) {
       let rx = getX(input.RC);
       let sep = metersToInches(2 * RING_RADIUS);
 
-
-      if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .06 && Math.abs(rx) < .06) {
+      let default_condition = (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .06 && Math.abs(rx) < .06);
+      let override_condition = (input.LC.isButtonDown(3) && input.RC.isButtonDown(3) && input.RC.isDown() && input.LC.isDown());
+      // if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .06 && Math.abs(rx) < .06) {
+         if(default_condition || override_condition){
          state.position = [0,0,0];
          if (state.calibrationCount === undefined)
             state.calibrationCount = 0;
@@ -1386,7 +1395,7 @@ let calibrate = function (input, state) {
             m.rotateY(Math.atan2(D[0], D[2]) + Math.PI / 2);
 
 
-            m.translate(0, 0, -2);
+            m.translate(0, -1.2, -2);
             //m.translate(-2.35, 1.00, -.72);
 
             state.avatarMatrixForward = CG.matrixInverse(m.value());
